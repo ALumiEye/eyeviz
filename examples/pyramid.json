@@ -1,0 +1,48 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Square pyramid",
+    "description": "Pyramid S.ABCD with a square base of side 4 and apex S at height h above the center. The plane through S, A and B contains one lateral face.",
+    "lang": "en"
+  },
+  "camera": { "position": [8, -9, 6], "target": [0, 0, 1.5] },
+  "parameters": [
+    {
+      "id": "h",
+      "value": 3,
+      "min": 1,
+      "max": 6,
+      "step": 0.1,
+      "label": "Height h",
+      "control": "slider"
+    },
+    { "id": "showPlane", "value": true, "label": "Show plane (SAB)", "control": "toggle" }
+  ],
+  "objects": [
+    { "id": "A", "type": "point", "position": [-2, -2, 0] },
+    { "id": "B", "type": "point", "position": [2, -2, 0] },
+    { "id": "C", "type": "point", "position": [2, 2, 0] },
+    { "id": "D", "type": "point", "position": [-2, 2, 0] },
+    { "id": "S", "type": "point", "position": [0, 0, "h"], "color": "#d6336c" },
+    { "id": "AB", "type": "segment", "from": "A", "to": "B" },
+    { "id": "BC", "type": "segment", "from": "B", "to": "C" },
+    { "id": "CD", "type": "segment", "from": "C", "to": "D" },
+    { "id": "DA", "type": "segment", "from": "D", "to": "A" },
+    { "id": "SA", "type": "segment", "from": "S", "to": "A" },
+    { "id": "SB", "type": "segment", "from": "S", "to": "B" },
+    { "id": "SC", "type": "segment", "from": "S", "to": "C" },
+    { "id": "SD", "type": "segment", "from": "S", "to": "D" },
+    {
+      "id": "SAB",
+      "type": "plane",
+      "name": "Plane (SAB)",
+      "through": ["S", "A", "B"],
+      "visible": "showPlane"
+    },
+    { "id": "lA", "type": "label", "text": "A", "at": "A" },
+    { "id": "lB", "type": "label", "text": "B", "at": "B" },
+    { "id": "lC", "type": "label", "text": "C", "at": "C" },
+    { "id": "lD", "type": "label", "text": "D", "at": "D" },
+    { "id": "lS", "type": "label", "text": "S", "at": "S" }
+  ]
+}

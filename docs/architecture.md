@@ -42,7 +42,7 @@ synchronizes directly with JSON strings. See [ADR-0001](adr/0001-spec-model-stat
 | Package                           | Responsibility                                                                   | May depend on                              |
 | --------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------ |
 | `@alumieye/eyeviz-spec`           | Spec types, schema, structural + referential validation, versioning, JSON Schema | `zod` (internal only)                      |
-| `@alumieye/eyeviz-math`           | Expression parsing, whitelisting, evaluation, symbol extraction                  | `mathjs` (internal only)                   |
+| `@alumieye/eyeviz-math`           | Expression parsing, whitelisting, evaluation, symbol extraction                  | nothing (no dependencies)                  |
 | `@alumieye/eyeviz-core`           | Spec → Model compilation, parameter/time state, evaluation, sampling, events     | spec, math                                 |
 | `@alumieye/eyeviz-renderer-three` | Scene State → Three.js; camera, controls, disposal                               | core, spec, `three` (peer)                 |
 | `@alumieye/eyeviz-react`          | `<EyeVizScene>`, `useEyeViz()`                                                   | core, renderer-three, spec, `react` (peer) |
@@ -67,7 +67,7 @@ Boundaries are enforced by tooling, not convention:
 1. **`scripts/boundaries.mjs`** — the single source of truth for the allowed graph.
 2. **`pnpm check:boundaries`** — fails if any `package.json` declares a dependency outside it.
 3. **ESLint `no-restricted-imports`** — fails if source code imports a forbidden module
-   (e.g. `three` from `core`, `mathjs` from anywhere but `math`).
+   (e.g. `three` or `zod` from `core`, `react` from the renderer).
 4. **TypeScript `lib`** — `spec`, `math` and `core` compile without DOM types, so
    `document`, `window` or `HTMLElement` cannot appear there.
 5. **pnpm's strict `node_modules`** — undeclared dependencies cannot be resolved.
@@ -114,7 +114,11 @@ interface SceneState {
 type ObjectState =
   | { type: "point"; position: NumberVec3 }
   | { type: "segment"; from: NumberVec3; to: NumberVec3 }
-  | { type: "curve"; polylines: readonly Float64Array[] }; // interleaved x, y, z
+  | { type: "vector"; origin: NumberVec3; components: NumberVec3 }
+  | { type: "plane"; center: NumberVec3; normal: NumberVec3; extent?: number } // unit normal
+  | { type: "curve"; polylines: readonly Float64Array[] } // interleaved x, y, z
+  | { type: "surface"; rows: number; columns: number; positions: Float64Array } // NaN = undefined
+  | { type: "label"; text: string; position: NumberVec3 };
 ```
 
 - **Structural sharing:** an object whose inputs did not change keeps the same state object
@@ -124,7 +128,9 @@ type ObjectState =
   values and discontinuities (a bisection test distinguishes jumps and asymptotes from steep
   but continuous curves). Sample density is an engine option, never a spec field: 256 per
   curve by default, at most 4096, and at most 100 000 per scene.
-- Hidden curves are not sampled; they are sampled when they become visible.
+- Surfaces are sampled on a uniform grid (default 48 × 48, at most 256 × 256 and 250 000
+  vertices per scene); undefined vertices are `NaN` and their cells are not drawn.
+- Hidden curves and surfaces are not sampled; they are sampled when they become visible.
 - `state.parameters` keeps its identity while only time changes, so UIs can subscribe cheaply.
 
 ## 6. Engine and incremental updates
@@ -166,7 +172,7 @@ Codes: `SCHEMA_VALIDATION`, `UNSUPPORTED_VERSION`, `DUPLICATE_ID`, `RESERVED_NAM
 - Compile-time issues prevent an engine from being created.
 - Runtime numerical issues (e.g. `sqrt(-1)`) never throw: the object is marked
   `valid: false` and the issue is reported in `state.issues`.
-- Library exceptions (Zod, math.js) are always translated; they are never public API.
+- Library exceptions (e.g. Zod) are always translated; they are never public API.
 
 APIs that throw use one class, `EyeVizError`, which carries `issues`.
 

@@ -10,6 +10,7 @@ export { EyeVizError, formatPath, type EyeVizIssue, type EyeVizIssueCode } from 
 export { validateSpec, type ValidationResult } from "./validate";
 export { getSceneSpecJsonSchema } from "./json-schema";
 export type {
+  Anchor,
   AngleUnit,
   BooleanParameterSpec,
   CameraSpec,
@@ -24,5 +25,10 @@ export type {
   SceneObjectType,
   SceneSpec,
   SegmentSpec,
+  LabelSpec,
+  PlaneSpec,
+  SceneSettings,
+  SurfaceSpec,
+  VectorSpec,
   Vec3,
 } from "./types";

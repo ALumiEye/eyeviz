@@ -70,6 +70,7 @@ there are no meshes, materials, segment counts or renderer settings in a spec.
 | ------------ | -------------------------- | -------- | ---------------------------------------- |
 | `version`    | `"0.1"`                    | yes      | Unknown versions → `UNSUPPORTED_VERSION` |
 | `metadata`   | [Metadata](#metadata)      | no       |                                          |
+| `scene`      | [Scene](#scene)            | no       | Dimension, axes, grid                    |
 | `camera`     | [Camera](#camera)          | no       | Renderer picks a default view if absent  |
 | `parameters` | [Parameter](#parameters)[] | no       | At most 100                              |
 | `objects`    | [SceneObject](#objects)[]  | yes      | At most 1000; may be empty               |
@@ -84,6 +85,14 @@ there are no meshes, materials, segment counts or renderer settings in a spec.
 
 Metadata is plain text. HTML is never interpreted.
 
+### Scene
+
+| Field       | Type             | Default | Notes                                                                               |
+| ----------- | ---------------- | ------- | ----------------------------------------------------------------------------------- |
+| `dimension` | `"2d"` \| `"3d"` | `"3d"`  | `"2d"` shows the x–y plane from above with rotation locked (graphs, plane geometry) |
+| `axes`      | boolean          | `true`  | Coordinate axes with tick marks, numbers and names                                  |
+| `grid`      | boolean          | `true`  | Grid on the z = 0 plane                                                             |
+
 ### Camera
 
 | Field      | Type                       | Notes                 |
@@ -91,8 +100,8 @@ Metadata is plain text. HTML is never interpreted.
 | `position` | `[number, number, number]` | Initial eye position  |
 | `target`   | `[number, number, number]` | Initial look-at point |
 
-Camera values are numbers, not expressions, in v0.1. Projection type is not configurable yet
-(perspective); an orthographic option arrives with 2D scenes.
+Camera values are numbers, not expressions, in v0.1. In 2D scenes only `target` is used
+(the center of the view); the renderer frames the drawing automatically.
 
 ## Parameters
 
@@ -157,6 +166,39 @@ Colour is a presentation hint. Meaning must not be conveyed by colour alone.
 Segments reference points instead of duplicating coordinates; moving a point moves every
 segment attached to it.
 
+### `vector`
+
+An arrow from `origin` to `origin + components`.
+
+| Field        | Type               | Notes                                        |
+| ------------ | ------------------ | -------------------------------------------- |
+| `origin`     | point id \| `Vec3` | Optional, default `[0, 0, 0]`                |
+| `components` | `Vec3`             | The displacement; a zero vector is not drawn |
+
+```json
+{ "id": "v", "type": "vector", "origin": "A", "components": ["v0*cos(theta)", "v0*sin(theta)", 0] }
+```
+
+### `plane`
+
+A plane, given in exactly one of two ways:
+
+| Field     | Type                             | Notes                                                            |
+| --------- | -------------------------------- | ---------------------------------------------------------------- |
+| `through` | `[point id, point id, point id]` | Three different points. Collinear points are reported at runtime |
+| `point`   | point id \| `Vec3`               | With `normal`: a point on the plane                              |
+| `normal`  | `Vec3`                           | With `point`: a non-zero normal vector                           |
+| `extent`  | `Scalar`                         | Optional half-size of the drawn square patch (> 0)               |
+
+Planes are infinite; only a square patch around the plane's center is drawn. Without
+`extent`, a plane through three points is drawn a little larger than its triangle, and a
+point + normal plane is sized to the scene.
+
+```json
+{ "id": "P", "type": "plane", "through": ["S", "A", "B"] }
+{ "id": "Q", "type": "plane", "point": [0, 0, 1], "normal": [0, 0, 1], "extent": 3 }
+```
+
 ### `curve`
 
 A parametric curve `position(variable)` for `variable ∈ domain`.
@@ -169,19 +211,48 @@ A parametric curve `position(variable)` for `variable ∈ domain`.
 
 The graph of `y = f(x)` is written `"variable": "x", "position": ["x", "f(x)", "0"]`.
 A helix is `"variable": "s", "position": ["cos(s)", "sin(s)", "s/5"]`. One form covers 2D
-graphs and 3D space curves, and surfaces will follow the same pattern
-(`variables: ["u", "v"]`). See [ADR-0006](adr/0006-parametric-curves.md).
+graphs and 3D space curves; surfaces follow the same pattern. See
+[ADR-0006](adr/0006-parametric-curves.md).
 
 Sampling density is not part of the spec. Where the curve is undefined (e.g. `tan(x)` at
 `π/2`, `sqrt(x)` for `x < 0`), it is broken into separate pieces rather than connected.
 
+### `surface`
+
+A parametric surface `position(u, v)` for `u` and `v` in their domains.
+
+| Field       | Type                               | Notes                                                          |
+| ----------- | ---------------------------------- | -------------------------------------------------------------- |
+| `variables` | `[identifier, identifier]`         | Two different names, local to this surface                     |
+| `domain`    | `{ [variable]: [Scalar, Scalar] }` | Exactly one range per variable. May use parameters and `t`     |
+| `position`  | `Vec3`                             | Expressions may use both variables, parameters, `t`, constants |
+
+The graph of `z = f(x, y)` is `"variables": ["x", "y"], "position": ["x", "y", "f(x, y)"]`;
+a sphere is `"variables": ["u", "v"], "position": ["cos(u)*sin(v)", "sin(u)*sin(v)", "cos(v)"]`.
+Grid density is an engine option, not a spec field. Where the surface is undefined
+(e.g. `sqrt(x)` for `x < 0`), that part is left out.
+
+### `label`
+
+Plain text shown next to a point or position. Text is never interpreted as HTML.
+
+| Field  | Type               | Notes                         |
+| ------ | ------------------ | ----------------------------- |
+| `text` | string             | 1–200 characters              |
+| `at`   | point id \| `Vec3` | A label on a point follows it |
+
+```json
+{ "id": "lA", "type": "label", "text": "A", "at": "A" }
+```
+
 ## Symbol scope
 
-| Context          | Number parameters | `t` | Constants (`pi`, `e`) | Curve `variable` |
-| ---------------- | :---------------: | :-: | :-------------------: | :--------------: |
-| `point.position` |         ✓         |  ✓  |           ✓           |                  |
-| `curve.domain`   |         ✓         |  ✓  |           ✓           |                  |
-| `curve.position` |         ✓         |  ✓  |           ✓           |        ✓         |
+| Context                                             | Number parameters | `t` | Constants (`pi`, `e`) | Own variable(s) |
+| --------------------------------------------------- | :---------------: | :-: | :-------------------: | :-------------: |
+| `point.position`, `label.at`, `vector.*`, `plane.*` |         ✓         |  ✓  |           ✓           |                 |
+| `curve.domain`, `surface.domain`                    |         ✓         |  ✓  |           ✓           |                 |
+| `curve.position`                                    |         ✓         |  ✓  |           ✓           |  ✓ `variable`   |
+| `surface.position`                                  |         ✓         |  ✓  |           ✓           |  ✓ `variables`  |
 
 `t` is the scene time in seconds (default `0`). Timeline playback arrives in Phase 3; the
 symbol is reserved and evaluable from v0.1.
@@ -199,21 +270,16 @@ Invalid specs produce structured issues with a JSON path, for example:
 }
 ```
 
-See [architecture.md §7](architecture.md#7-error-model-planned) for all codes.
+See [architecture.md §7](architecture.md#7-error-model) for all codes.
 
 ## Not in v0.1
 
 These are planned and will be added **additively** (non-normative sketches only):
 
-| Field / type                    | Phase | Sketch                                                                   |
-| ------------------------------- | ----- | ------------------------------------------------------------------------ |
-| `vector`                        | 2     | `{ "type": "vector", "origin": "A" \| Vec3, "components": Vec3 }`        |
-| `plane`                         | 2     | point + normal, or three points                                          |
-| `surface`                       | 2     | `{ "variables": ["u","v"], "domain": {…}, "position": Vec3 }`            |
-| `label`                         | 2     | plain-text label anchored to a point or position                         |
-| `scene.axes`, `scene.dimension` | 2     | axes configuration; `"2d"` scenes with orthographic camera               |
-| `timeline`                      | 3     | duration, loop                                                           |
-| `behaviors`                     | 3     | to be decided: may be unnecessary because expressions already accept `t` |
-| `steps`                         | 4     | `show` / `hide` / `highlight` / `focus` by object ID                     |
+| Field / type | Phase | Sketch                                                                   |
+| ------------ | ----- | ------------------------------------------------------------------------ |
+| `timeline`   | 3     | duration, loop                                                           |
+| `behaviors`  | 3     | to be decided: may be unnecessary because expressions already accept `t` |
+| `steps`      | 4     | `show` / `hide` / `highlight` / `focus` by object ID                     |
 
 Field names in this table are not final.

@@ -1,0 +1,57 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Paraboloid",
+    "description": "The surface z = a·(x² + y²) over the square −2 ≤ x, y ≤ 2, with a point P on the surface above (x0, y0).",
+    "lang": "en"
+  },
+  "camera": { "position": [7, -8, 9], "target": [0, 0, 2] },
+  "parameters": [
+    {
+      "id": "a",
+      "value": 0.5,
+      "min": 0.1,
+      "max": 1.5,
+      "step": 0.05,
+      "label": "Curvature a",
+      "control": "slider"
+    },
+    {
+      "id": "x0",
+      "value": 1,
+      "min": -2,
+      "max": 2,
+      "step": 0.05,
+      "label": "x0",
+      "control": "slider"
+    },
+    {
+      "id": "y0",
+      "value": -1,
+      "min": -2,
+      "max": 2,
+      "step": 0.05,
+      "label": "y0",
+      "control": "slider"
+    }
+  ],
+  "objects": [
+    {
+      "id": "paraboloid",
+      "type": "surface",
+      "name": "z = a·(x² + y²)",
+      "variables": ["x", "y"],
+      "domain": { "x": [-2, 2], "y": [-2, 2] },
+      "position": ["x", "y", "a*(x^2 + y^2)"]
+    },
+    {
+      "id": "P",
+      "type": "point",
+      "name": "Point P on the surface",
+      "position": ["x0", "y0", "a*(x0^2 + y0^2)"]
+    },
+    { "id": "P0", "type": "point", "name": "Foot of P", "position": ["x0", "y0", 0] },
+    { "id": "PP0", "type": "segment", "from": "P0", "to": "P" },
+    { "id": "lP", "type": "label", "text": "P", "at": "P" }
+  ]
+}

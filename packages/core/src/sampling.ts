@@ -154,3 +154,53 @@ function distance(a: ArrayLike<number>, ai: number, b: ArrayLike<number>, bi: nu
 function distance3(a: readonly number[], b: readonly number[]): number {
   return distance(a, 0, b, 0);
 }
+
+/** Writes the surface point for parameters `(u, v)` into `out[0..2]`. */
+export type SurfaceFunction = (u: number, v: number, out: number[]) => void;
+
+export interface SurfaceGrid {
+  /** Samples along `v`. */
+  readonly rows: number;
+  /** Samples along `u`. */
+  readonly columns: number;
+  /**
+   * Row-major `x, y, z` per vertex: vertex `(i, j)` (row `i`, column `j`) starts at
+   * `(i * columns + j) * 3`. Vertices where the surface is undefined are `NaN, NaN, NaN`.
+   */
+  readonly positions: Float64Array;
+  readonly finiteCount: number;
+}
+
+/**
+ * Samples a parametric surface on a uniform `samples × samples` grid. Renderers skip every
+ * grid cell that touches an undefined (`NaN`) vertex. Deterministic.
+ */
+export function sampleSurface(
+  fn: SurfaceFunction,
+  [uStart, uEnd]: readonly [number, number],
+  [vStart, vEnd]: readonly [number, number],
+  samples: number,
+): SurfaceGrid {
+  const n = Math.max(2, Math.floor(samples));
+  const positions = new Float64Array(n * n * 3);
+  const scratch = [0, 0, 0];
+  let finiteCount = 0;
+  for (let i = 0; i < n; i++) {
+    const v = i === n - 1 ? vEnd : vStart + ((vEnd - vStart) * i) / (n - 1);
+    for (let j = 0; j < n; j++) {
+      const u = j === n - 1 ? uEnd : uStart + ((uEnd - uStart) * j) / (n - 1);
+      fn(u, v, scratch);
+      const [x, y, z] = scratch as [number, number, number];
+      const offset = (i * n + j) * 3;
+      if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+        positions[offset] = x;
+        positions[offset + 1] = y;
+        positions[offset + 2] = z;
+        finiteCount++;
+      } else {
+        positions[offset] = positions[offset + 1] = positions[offset + 2] = NaN;
+      }
+    }
+  }
+  return { rows: n, columns: n, positions, finiteCount };
+}

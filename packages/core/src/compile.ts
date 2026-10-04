@@ -16,6 +16,7 @@ import {
 } from "@alumieye/eyeviz-math";
 import {
   validateSpec,
+  type Anchor,
   type EyeVizIssue,
   type Scalar,
   type SceneObjectSpec,
@@ -24,7 +25,9 @@ import {
 } from "@alumieye/eyeviz-spec";
 import {
   TIME_SYMBOL,
+  type AnchorModel,
   type ObjectModel,
+  type PlaneModel,
   type ParameterModel,
   type ScalarModel,
   type SceneModel,
@@ -90,6 +93,11 @@ class Compiler {
     const model: SceneModel = Object.freeze({
       version: this.spec.version,
       metadata: Object.freeze({ ...this.spec.metadata }),
+      scene: Object.freeze({
+        dimension: this.spec.scene?.dimension ?? "3d",
+        axes: this.spec.scene?.axes ?? true,
+        grid: this.spec.scene?.grid ?? true,
+      }),
       ...(this.spec.camera ? { camera: this.spec.camera } : {}),
       parameters,
       objects,
@@ -151,6 +159,9 @@ class Compiler {
     this.spec.objects.forEach((o, i) => {
       check(o.id, `objects[${i}].id`);
       if (o.type === "curve") check(o.variable, `objects[${i}].variable`);
+      if (o.type === "surface") {
+        o.variables.forEach((v, j) => check(v, `objects[${i}].variables[${j}]`));
+      }
     });
   }
 
@@ -183,6 +194,31 @@ class Compiler {
         dependencies.add(object.from);
         dependencies.add(object.to);
         return { ...base, type: "segment", from: object.from, to: object.to };
+      case "vector":
+        return {
+          ...base,
+          type: "vector",
+          origin: this.compileAnchor(object.origin ?? [0, 0, 0], `${at}.origin`, dependencies),
+          components: this.compileVec3(object.components, `${at}.components`, dependencies),
+        };
+      case "plane": {
+        const extent =
+          object.extent === undefined
+            ? undefined
+            : this.compileScalar(object.extent, `${at}.extent`, dependencies);
+        let form: PlaneModel["form"];
+        if (object.through) {
+          for (const id of object.through) dependencies.add(id);
+          form = { kind: "through", points: object.through };
+        } else {
+          form = {
+            kind: "point-normal",
+            point: this.compileAnchor(object.point as Anchor, `${at}.point`, dependencies),
+            normal: this.compileVec3(object.normal as Vec3, `${at}.normal`, dependencies),
+          };
+        }
+        return { ...base, type: "plane", form, ...(extent ? { extent } : {}) };
+      }
       case "curve":
         return {
           ...base,
@@ -192,26 +228,55 @@ class Compiler {
             this.compileScalar(object.domain[0], `${at}.domain[0]`, dependencies),
             this.compileScalar(object.domain[1], `${at}.domain[1]`, dependencies),
           ],
-          position: this.compileVec3(
-            object.position,
-            `${at}.position`,
-            dependencies,
+          position: this.compileVec3(object.position, `${at}.position`, dependencies, [
             object.variable,
-          ),
+          ]),
+        };
+      case "surface": {
+        const [u, v] = object.variables;
+        const range = (variable: string) => {
+          const [start, end] = object.domain[variable] as readonly [Scalar, Scalar];
+          return [
+            this.compileScalar(start, `${at}.domain.${variable}[0]`, dependencies),
+            this.compileScalar(end, `${at}.domain.${variable}[1]`, dependencies),
+          ] as const;
+        };
+        return {
+          ...base,
+          type: "surface",
+          variables: [u, v],
+          domain: [range(u), range(v)],
+          position: this.compileVec3(object.position, `${at}.position`, dependencies, [u, v]),
+        };
+      }
+      case "label":
+        return {
+          ...base,
+          type: "label",
+          text: object.text,
+          at: this.compileAnchor(object.at, `${at}.at`, dependencies),
         };
     }
+  }
+
+  private compileAnchor(anchor: Anchor, path: string, dependencies: Set<string>): AnchorModel {
+    if (typeof anchor === "string") {
+      dependencies.add(anchor);
+      return { kind: "point", id: anchor };
+    }
+    return { kind: "position", position: this.compileVec3(anchor, path, dependencies) };
   }
 
   private compileVec3(
     vec: Vec3,
     path: string,
     dependencies: Set<string>,
-    local?: string,
+    locals: readonly string[] = [],
   ): Vec3Model {
     return [
-      this.compileScalar(vec[0], `${path}[0]`, dependencies, local),
-      this.compileScalar(vec[1], `${path}[1]`, dependencies, local),
-      this.compileScalar(vec[2], `${path}[2]`, dependencies, local),
+      this.compileScalar(vec[0], `${path}[0]`, dependencies, locals),
+      this.compileScalar(vec[1], `${path}[1]`, dependencies, locals),
+      this.compileScalar(vec[2], `${path}[2]`, dependencies, locals),
     ];
   }
 
@@ -219,7 +284,7 @@ class Compiler {
     value: Scalar,
     path: string,
     dependencies: Set<string>,
-    local?: string,
+    locals: readonly string[] = [],
   ): ScalarModel {
     if (typeof value === "number") return { kind: "constant", value };
 
@@ -230,17 +295,22 @@ class Compiler {
     }
 
     for (const symbol of result.expression.symbols) {
-      if (symbol === local) continue;
+      if (locals.includes(symbol)) continue;
       if (symbol === TIME_SYMBOL || this.numberParameters.has(symbol)) {
         dependencies.add(symbol);
         continue;
       }
-      this.issues.push(this.symbolIssue(symbol, value, path, local));
+      this.issues.push(this.symbolIssue(symbol, value, path, locals));
     }
     return { kind: "expression", expression: result.expression };
   }
 
-  private symbolIssue(symbol: string, source: string, path: string, local?: string): EyeVizIssue {
+  private symbolIssue(
+    symbol: string,
+    source: string,
+    path: string,
+    locals: readonly string[],
+  ): EyeVizIssue {
     const where = `in expression ${JSON.stringify(source)}`;
     if (this.booleanParameters.has(symbol)) {
       return {
@@ -253,7 +323,7 @@ class Compiler {
     if (this.objectIds.has(symbol)) {
       return {
         code: "INVALID_REFERENCE_TYPE",
-        message: `Object '${symbol}' cannot be used ${where}; expressions may only use number parameters, '${TIME_SYMBOL}'${local ? ` and '${local}'` : ""}`,
+        message: `Object '${symbol}' cannot be used ${where}; expressions may only use number parameters, '${TIME_SYMBOL}'${locals.map((l) => ` and '${l}'`).join("")}`,
         path,
         details: { symbol },
       };
@@ -266,7 +336,7 @@ class Compiler {
         details: { symbol },
       };
     }
-    const candidates = [...this.numberParameters, TIME_SYMBOL, ...(local ? [local] : [])];
+    const candidates = [...this.numberParameters, TIME_SYMBOL, ...locals];
     const suggestion = suggest(symbol, candidates);
     return {
       code: "UNKNOWN_SYMBOL",

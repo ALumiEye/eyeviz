@@ -72,13 +72,64 @@ const curve = z.strictObject({
   position: vec3,
 });
 
-export const sceneObjectSchema = z.discriminatedUnion("type", [point, segment, curve]);
+/** A point ID, or an inline position. */
+const anchor = z.union([id, vec3]);
+
+const vector = z.strictObject({
+  ...objectBase,
+  type: z.literal("vector"),
+  origin: z.exactOptional(anchor),
+  components: vec3,
+});
+
+// Two forms (three points, or point + normal); exactly one is enforced by validateSpec,
+// because Zod cannot nest a union inside the discriminated union.
+const plane = z.strictObject({
+  ...objectBase,
+  type: z.literal("plane"),
+  through: z.exactOptional(z.tuple([id, id, id])),
+  point: z.exactOptional(anchor),
+  normal: z.exactOptional(vec3),
+  extent: z.exactOptional(scalar),
+});
+
+const surface = z.strictObject({
+  ...objectBase,
+  type: z.literal("surface"),
+  variables: z.tuple([id, id]),
+  domain: z.record(id, z.tuple([scalar, scalar])),
+  position: vec3,
+});
+
+const labelObject = z.strictObject({
+  ...objectBase,
+  type: z.literal("label"),
+  text: z.string().min(1).max(SPEC_LIMITS.maxLabelLength),
+  at: anchor,
+});
+
+export const sceneObjectSchema = z.discriminatedUnion("type", [
+  point,
+  segment,
+  vector,
+  plane,
+  curve,
+  surface,
+  labelObject,
+]);
 
 export const parameterSchema = z.union([numberParameter, booleanParameter]);
+
+const scene = z.strictObject({
+  dimension: z.exactOptional(z.enum(["2d", "3d"])),
+  axes: z.exactOptional(z.boolean()),
+  grid: z.exactOptional(z.boolean()),
+});
 
 export const sceneSpecSchema = z.strictObject({
   version: z.literal("0.1"),
   metadata: z.exactOptional(metadata),
+  scene: z.exactOptional(scene),
   camera: z.exactOptional(camera),
   parameters: z.exactOptional(z.array(parameterSchema).max(SPEC_LIMITS.maxParameters)),
   objects: z.array(sceneObjectSchema).max(SPEC_LIMITS.maxObjects),

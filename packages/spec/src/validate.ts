@@ -1,7 +1,13 @@
 import type * as z from "zod";
 import { formatPath, type EyeVizIssue } from "./issues";
 import { sceneSpecSchema } from "./schema";
-import type { NumberParameterSpec, ParameterSpec, SceneObjectSpec, SceneSpec } from "./types";
+import type {
+  NumberParameterSpec,
+  ParameterSpec,
+  PlaneSpec,
+  SceneObjectSpec,
+  SceneSpec,
+} from "./types";
 import { SPEC_VERSION } from "./version";
 
 export type ValidationResult =
@@ -151,33 +157,120 @@ function checkIdsAndReferences(spec: SceneSpec): EyeVizIssue[] {
       }
     }
 
-    if (object.type === "segment") {
-      for (const field of ["from", "to"] as const) {
-        const ref = object[field];
-        const target = objects.get(ref);
-        if (!target) {
-          issues.push(
-            parameters.has(ref)
-              ? wrongType(ref, "point", "parameter", `${at}.${field}`)
-              : missing(ref, "point", `${at}.${field}`),
-          );
-        } else if (target.object.type !== "point") {
-          issues.push(wrongType(ref, "point", target.object.type, `${at}.${field}`));
-        }
+    /** Checks that `ref` names a point. */
+    const pointRef = (ref: string, path: string) => {
+      const target = objects.get(ref);
+      if (!target) {
+        issues.push(
+          parameters.has(ref)
+            ? wrongType(ref, "point", "parameter", path)
+            : missing(ref, "point", path),
+        );
+      } else if (target.object.type !== "point") {
+        issues.push(wrongType(ref, "point", target.object.type, path));
       }
-    }
+    };
+    const variableClash = (variable: string, path: string) => {
+      if (firstPath.has(variable)) {
+        issues.push({
+          code: "DUPLICATE_ID",
+          message: `Variable '${variable}' of '${object.id}' collides with the ID at ${firstPath.get(variable)}`,
+          path,
+          details: { id: variable },
+        });
+      }
+    };
 
-    if (object.type === "curve" && firstPath.has(object.variable)) {
-      issues.push({
-        code: "DUPLICATE_ID",
-        message: `Curve variable '${object.variable}' of '${object.id}' collides with the ID at ${firstPath.get(object.variable)}`,
-        path: `${at}.variable`,
-        details: { id: object.variable },
-      });
+    switch (object.type) {
+      case "segment":
+        pointRef(object.from, `${at}.from`);
+        pointRef(object.to, `${at}.to`);
+        break;
+      case "vector":
+        if (typeof object.origin === "string") pointRef(object.origin, `${at}.origin`);
+        break;
+      case "label":
+        if (typeof object.at === "string") pointRef(object.at, `${at}.at`);
+        break;
+      case "plane":
+        issues.push(...checkPlaneForm(object, at));
+        object.through?.forEach((ref, i) => pointRef(ref, `${at}.through[${i}]`));
+        if (typeof object.point === "string") pointRef(object.point, `${at}.point`);
+        break;
+      case "curve":
+        variableClash(object.variable, `${at}.variable`);
+        break;
+      case "surface": {
+        const [u, v] = object.variables;
+        if (u === v) {
+          issues.push({
+            code: "SCHEMA_VALIDATION",
+            message: `Surface '${object.id}' needs two different variables`,
+            path: `${at}.variables[1]`,
+          });
+        }
+        object.variables.forEach((variable, i) => variableClash(variable, `${at}.variables[${i}]`));
+        for (const variable of object.variables) {
+          if (!Object.hasOwn(object.domain, variable)) {
+            issues.push({
+              code: "SCHEMA_VALIDATION",
+              message: `Surface '${object.id}' has no domain for variable '${variable}'; add "${variable}": [start, end]`,
+              path: `${at}.domain`,
+              details: { variable },
+            });
+          }
+        }
+        for (const key of Object.keys(object.domain)) {
+          if (!object.variables.includes(key)) {
+            issues.push({
+              code: "SCHEMA_VALIDATION",
+              message: `Domain key '${key}' of '${object.id}' is not one of its variables (${object.variables.join(", ")})`,
+              path: `${at}.domain.${key}`,
+              details: { keys: [key] },
+            });
+          }
+        }
+        break;
+      }
+      case "point":
+        break;
     }
   });
 
   return issues;
+}
+
+function checkPlaneForm(plane: PlaneSpec, at: string): EyeVizIssue[] {
+  const throughForm = plane.through !== undefined;
+  const pointForm = plane.point !== undefined || plane.normal !== undefined;
+  if (throughForm && pointForm) {
+    return [
+      {
+        code: "SCHEMA_VALIDATION",
+        message: `Plane '${plane.id}': use either "through" (three points) or "point" + "normal", not both`,
+        path: at,
+      },
+    ];
+  }
+  if (!throughForm && (plane.point === undefined || plane.normal === undefined)) {
+    return [
+      {
+        code: "SCHEMA_VALIDATION",
+        message: `Plane '${plane.id}' needs "through": [three point IDs], or both "point" and "normal"`,
+        path: at,
+      },
+    ];
+  }
+  if (plane.through && new Set(plane.through).size < 3) {
+    return [
+      {
+        code: "SCHEMA_VALIDATION",
+        message: `Plane '${plane.id}' must pass through three different points`,
+        path: `${at}.through`,
+      },
+    ];
+  }
+  return [];
 }
 
 function missing(id: string, expected: string, path: string): EyeVizIssue {

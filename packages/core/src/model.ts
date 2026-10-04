@@ -12,6 +12,11 @@ export type ScalarModel =
 
 export type Vec3Model = readonly [ScalarModel, ScalarModel, ScalarModel];
 
+/** A position given by a point ID, or inline. */
+export type AnchorModel =
+  | { readonly kind: "point"; readonly id: string }
+  | { readonly kind: "position"; readonly position: Vec3Model };
+
 export type VisibilityModel =
   | { readonly kind: "constant"; readonly value: boolean }
   | { readonly kind: "parameter"; readonly id: string };
@@ -38,6 +43,20 @@ export interface SegmentModel extends ObjectModelBase {
   readonly to: string;
 }
 
+export interface VectorModel extends ObjectModelBase {
+  readonly type: "vector";
+  readonly origin: AnchorModel;
+  readonly components: Vec3Model;
+}
+
+export interface PlaneModel extends ObjectModelBase {
+  readonly type: "plane";
+  readonly form:
+    | { readonly kind: "through"; readonly points: readonly [string, string, string] }
+    | { readonly kind: "point-normal"; readonly point: AnchorModel; readonly normal: Vec3Model };
+  readonly extent?: ScalarModel;
+}
+
 export interface CurveModel extends ObjectModelBase {
   readonly type: "curve";
   readonly variable: string;
@@ -45,7 +64,32 @@ export interface CurveModel extends ObjectModelBase {
   readonly position: Vec3Model;
 }
 
-export type ObjectModel = PointModel | SegmentModel | CurveModel;
+export interface SurfaceModel extends ObjectModelBase {
+  readonly type: "surface";
+  readonly variables: readonly [string, string];
+  /** Domains in the order of `variables`. */
+  readonly domain: readonly [
+    readonly [ScalarModel, ScalarModel],
+    readonly [ScalarModel, ScalarModel],
+  ];
+  readonly position: Vec3Model;
+}
+
+export interface LabelModel extends ObjectModelBase {
+  readonly type: "label";
+  readonly text: string;
+  readonly at: AnchorModel;
+}
+
+export type ObjectModel =
+  PointModel | SegmentModel | VectorModel | PlaneModel | CurveModel | SurfaceModel | LabelModel;
+
+/** Scene settings with defaults applied. */
+export interface SceneSettingsModel {
+  readonly dimension: "2d" | "3d";
+  readonly axes: boolean;
+  readonly grid: boolean;
+}
 
 export interface NumberParameterModel {
   readonly kind: "number";
@@ -76,6 +120,7 @@ export type ParameterModel = NumberParameterModel | BooleanParameterModel;
 export interface SceneModel {
   readonly version: "0.1";
   readonly metadata: SceneMetadata;
+  readonly scene: SceneSettingsModel;
   readonly camera?: CameraSpec;
   /** In spec order. */
   readonly parameters: ReadonlyMap<string, ParameterModel>;

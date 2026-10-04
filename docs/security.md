@@ -16,30 +16,33 @@ EyeViz runs entirely on the viewer's device, so (3) is the main availability ris
 
 ## Guarantees
 
-| Rule                                                            | How it is enforced                                                                                    |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| No `eval`, `new Function`, dynamic `import()` from spec content | Never used; ESLint `no-eval`, `no-implied-eval`, `no-new-func` across the repo                        |
-| Expressions cannot reach globals or host objects                | Whitelisted AST; custom evaluator; no property access; see [expressions.md](expressions.md)           |
-| No HTML from specs                                              | All spec text (`title`, `description`, `name`, `label`) is plain text and rendered as text nodes only |
-| No code or URLs loaded from specs                               | The spec has no fields that reference code, scripts, or remote resources                              |
-| Library errors don't leak                                       | Zod/math.js errors are translated to `EyeVizIssue`                                                    |
-| Content Security Policy friendly                                | No `unsafe-eval` needed; no injected `<style>` tags                                                   |
+| Rule                                                            | How it is enforced                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| No `eval`, `new Function`, dynamic `import()` from spec content | Never used; ESLint `no-eval`, `no-implied-eval`, `no-new-func` across the repo                       |
+| Expressions cannot reach globals or host objects                | Whitelisted AST; custom evaluator; no property access; see [expressions.md](expressions.md)          |
+| No HTML from specs                                              | All spec text (`title`, `description`, `name`, `label`, label `text`) is set with `textContent` only |
+| No code or URLs loaded from specs                               | The spec has no fields that reference code, scripts, or remote resources                             |
+| Library errors don't leak                                       | Zod errors are translated to `EyeVizIssue`; the expression parser is our own code                    |
+| Content Security Policy friendly                                | No `unsafe-eval` needed; no injected `<style>` tags                                                  |
 
 ## Resource limits
 
 Limits apply at validation time (static) or evaluation time (dynamic). Exceeding one yields
 `LIMIT_EXCEEDED` rather than a hang.
 
-| Limit                                       | Default                    | Where                |
-| ------------------------------------------- | -------------------------- | -------------------- |
-| Objects per scene                           | 1000                       | spec                 |
-| Parameters per scene                        | 100                        | spec                 |
-| Text field length (`title` / `description`) | 200 / 2000                 | spec                 |
-| Expression length                           | 500 chars                  | math                 |
-| Expression AST nodes / depth                | 200 / 32                   | math                 |
-| Samples per curve                           | 256 default, 4096 hard cap | core (engine option) |
-| Total curve samples per scene               | 100 000                    | core                 |
-| Domain magnitude                            | finite, `\|value\| ≤ 1e6`  | core                 |
+| Limit                                       | Default                        | Where                |
+| ------------------------------------------- | ------------------------------ | -------------------- |
+| Objects per scene                           | 1000                           | spec                 |
+| Parameters per scene                        | 100                            | spec                 |
+| Text field length (`title` / `description`) | 200 / 2000                     | spec                 |
+| Expression length                           | 500 chars                      | math                 |
+| Expression AST nodes / depth                | 200 / 32                       | math                 |
+| Samples per curve                           | 256 default, 4096 hard cap     | core (engine option) |
+| Total curve samples per scene               | 100 000                        | core                 |
+| Surface grid per surface                    | 48 × 48 default, 256 × 256 cap | core (engine option) |
+| Total surface vertices per scene            | 250 000                        | core                 |
+| Label text length                           | 200 chars                      | spec                 |
+| Domain magnitude                            | finite, `\|value\| ≤ 1e6`      | core                 |
 
 Hosts may lower limits. Raising hard caps requires an explicit engine option and is the
 host's responsibility.

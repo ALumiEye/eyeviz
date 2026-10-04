@@ -17,7 +17,7 @@
 /** Package directory → modules its source code and package.json may depend on. */
 export const ALLOWED_DEPENDENCIES = {
   spec: ["zod"],
-  math: ["mathjs"],
+  math: [],
   core: ["@alumieye/eyeviz-spec", "@alumieye/eyeviz-math"],
   "renderer-three": ["@alumieye/eyeviz-core", "@alumieye/eyeviz-spec", "three"],
   react: [
@@ -45,7 +45,7 @@ export const ALLOWED_DEPENDENCIES = {
 /** Modules that must never be imported from a package's source, even if installed. */
 export const FORBIDDEN_IMPORTS = {
   spec: ["three", "react", "react-dom", "mathjs", "@alumieye/*"],
-  math: ["three", "react", "react-dom", "zod", "@alumieye/*"],
+  math: ["three", "react", "react-dom", "zod", "mathjs", "@alumieye/*"],
   core: [
     "three",
     "react",

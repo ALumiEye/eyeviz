@@ -7,12 +7,17 @@ import type { ObjectState, SceneState } from "./state";
 export interface EngineOptions {
   /** Samples per curve. Default 256, at most 4096. Lowered automatically for scenes with many curves. */
   readonly curveSamples?: number;
+  /** Samples per side of each surface grid. Default 48, at most 256. Lowered for many surfaces. */
+  readonly surfaceSamples?: number;
 }
 
 export const ENGINE_LIMITS = Object.freeze({
   defaultCurveSamples: 256,
   maxCurveSamples: 4096,
   maxTotalCurveSamples: 100_000,
+  defaultSurfaceSamples: 48,
+  maxSurfaceSamples: 256,
+  maxTotalSurfaceVertices: 250_000,
 });
 
 export type StateListener = (state: SceneState, changed: ReadonlySet<string>) => void;
@@ -34,6 +39,7 @@ export class EyeVizEngine {
   readonly model: SceneModel;
 
   readonly #curveSamples: number;
+  readonly #surfaceSamples: number;
   readonly #parameterList: readonly ParameterModel[];
   readonly #listeners = new Set<StateListener>();
   #values: Record<string, number | boolean>;
@@ -53,7 +59,11 @@ export class EyeVizEngine {
     }
 
     let curves = 0;
-    for (const object of this.model.objects.values()) if (object.type === "curve") curves++;
+    let surfaces = 0;
+    for (const object of this.model.objects.values()) {
+      if (object.type === "curve") curves++;
+      if (object.type === "surface") surfaces++;
+    }
     const requested = clamp(
       Math.floor(options.curveSamples ?? ENGINE_LIMITS.defaultCurveSamples),
       2,
@@ -63,6 +73,21 @@ export class EyeVizEngine {
       curves > 0
         ? Math.max(2, Math.min(requested, Math.floor(ENGINE_LIMITS.maxTotalCurveSamples / curves)))
         : requested;
+    const requestedSurface = clamp(
+      Math.floor(options.surfaceSamples ?? ENGINE_LIMITS.defaultSurfaceSamples),
+      2,
+      ENGINE_LIMITS.maxSurfaceSamples,
+    );
+    this.#surfaceSamples =
+      surfaces > 0
+        ? Math.max(
+            2,
+            Math.min(
+              requestedSurface,
+              Math.floor(Math.sqrt(ENGINE_LIMITS.maxTotalSurfaceVertices / surfaces)),
+            ),
+          )
+        : requestedSurface;
 
     this.#parameterList = Object.freeze([...this.model.parameters.values()]);
     this.#values = Object.freeze(
@@ -186,6 +211,7 @@ export class EyeVizEngine {
       scope,
       booleans,
       curveSamples: this.#curveSamples,
+      surfaceSamples: this.#surfaceSamples,
       objects,
     };
     for (const id of this.model.order) {

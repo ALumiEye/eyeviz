@@ -26,7 +26,7 @@ export const EXAMPLES: readonly Example[] = Object.entries(modules)
 
 /** Simplest first; examples not listed here follow alphabetically. */
 function rank(id: string): number {
-  const order = ["points-segments", "sine-curve", "helix"];
+  const order = ["points-segments", "sine-curve", "vectors", "pyramid", "paraboloid", "helix"];
   const index = order.indexOf(id);
   return index === -1 ? order.length : index;
 }

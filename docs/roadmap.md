@@ -7,7 +7,7 @@ block them; they are **not commitments**.
 | ----- | ------------------------ | ----------- |
 | 0     | Architecture foundation  | **Done**    |
 | 1     | Core vertical slice      | **Done**    |
-| 2     | Mathematical primitives  | Planned     |
+| 2     | Mathematical primitives  | **Done**    |
 | 3     | Parameters and animation | Planned     |
 | 4     | Educational interactions | Planned     |
 | 5     | Direct manipulation      | Planned     |
@@ -29,7 +29,7 @@ block them; they are **not commitments**.
 Goal: prove every layer with the smallest end-to-end slice.
 
 - [x] **spec** — v0.1 schema, `validateSpec`, referential checks, JSON Schema export
-- [x] **math** — math.js parser behind a whitelist, own evaluator, limits, error mapping
+- [x] **math** — whitelisted parser and evaluator, limits, error mapping
 - [x] **core** — `compileScene`, dependency graph, `EyeVizEngine` (parameters, time,
       deg→rad, incremental updates), point, segment, curve, discontinuity-aware sampler,
       renderer contract
@@ -43,16 +43,22 @@ Goal: prove every layer with the smallest end-to-end slice.
 
 Before the first npm publish:
 
-- [ ] Decide whether to replace the math.js parser (≈90 kB gzip of the ≈127 kB runtime) with
-      a small hand-written parser behind the same API ([ADR-0002](adr/0002-expression-engine.md))
+- [x] Replace the math.js parser with a hand-written one: runtime ≈127 kB → ≈37 kB gzip
+      ([ADR-0013](adr/0013-hand-written-expression-parser.md))
 - [ ] API report (API Extractor) and bundle-size budget in CI
 - [ ] Automated browser test for the Three.js renderer lifecycle
 
 ## Phase 2 — Mathematical primitives
 
-Vector, plane, surface, labels, coordinate axes in the spec, 2D scenes. Examples: `sin(x)`,
-paraboloid, vectors, 3D geometry. Optional static SVG renderer for posters/previews.
-Web Component wrapper for non-React hosts.
+- [x] `label` — DOM text anchored to a point or position
+- [x] `scene` — `dimension` (`"2d"` orthographic / `"3d"`), `axes` with ticks and numbers, `grid`
+- [x] `vector` — arrow from an origin (point or position) with components
+- [x] `plane` — through three points, or point + normal; collinear points reported
+- [x] `surface` — parametric `position(u, v)` sampled on a grid; undefined regions skipped
+- [x] Examples: sine graph (2D), vector addition (2D), square pyramid with a plane, paraboloid
+
+Deferred (not needed yet): static SVG renderer, Web Component wrapper, surface
+discontinuity detection.
 
 ## Phase 3 — Parameters and animation
 

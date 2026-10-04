@@ -1,16 +1,13 @@
 /**
  * Safe expression compiler.
  *
- *   string → math.js parse (AST only) → whitelist walk → EyeViz closures
+ *   string → EyeViz parser (AST) → whitelist walk → EyeViz closures
  *
- * math.js is used exclusively as a parser. Its evaluate/compile functions are never called,
- * and nothing outside this file touches math.js types. See docs/expressions.md.
+ * Nothing is ever evaluated as code: the AST is turned into plain closures over numbers.
+ * See docs/expressions.md.
  */
-import { create, parseDependencies, type FactoryFunctionMap, type MathNode } from "mathjs";
 import { CONSTANTS, FUNCTIONS } from "./functions";
-
-// A minimal math.js instance containing only the parser (no evaluate, units, matrices…).
-const { parse } = create({ parseDependencies: parseDependencies as FactoryFunctionMap });
+import { parseExpression, ParseError, type AstNode, type BinaryOperator } from "./parser";
 
 /** Limits that keep a hostile expression from exhausting the viewer's device. */
 export const EXPRESSION_LIMITS = Object.freeze({
@@ -44,12 +41,12 @@ export type ExpressionResult =
 
 type Evaluator = (scope: ExpressionScope) => number;
 
-const BINARY: Readonly<Record<string, (a: number, b: number) => number>> = {
-  add: (a, b) => a + b,
-  subtract: (a, b) => a - b,
-  multiply: (a, b) => a * b,
-  divide: (a, b) => a / b,
-  pow: (a, b) => Math.pow(a, b),
+const BINARY: Readonly<Record<BinaryOperator, (a: number, b: number) => number>> = {
+  "+": (a, b) => a + b,
+  "-": (a, b) => a - b,
+  "*": (a, b) => a * b,
+  "/": (a, b) => a / b,
+  "^": (a, b) => Math.pow(a, b),
 };
 
 /** Raised internally while walking the AST; converted into an `ExpressionIssue`. */
@@ -92,18 +89,40 @@ export function compileExpression(source: string): ExpressionResult {
     );
   }
 
-  let root: MathNode;
+  let root: AstNode;
   try {
-    root = parse(source);
+    root = parseExpression(source, EXPRESSION_LIMITS.maxDepth);
   } catch (error) {
-    const position = (error as { char?: unknown }).char;
+    if (!(error instanceof ParseError)) throw error;
+    if (error.kind === "depth") {
+      return fail(
+        reject(
+          "LIMIT_EXCEEDED",
+          `Expression is nested deeper than ${EXPRESSION_LIMITS.maxDepth} levels`,
+          {
+            limit: "maxDepth",
+          },
+        ),
+      );
+    }
+    if (error.message === "implicit multiplication") {
+      return fail(
+        reject(
+          "EXPRESSION_SYNTAX",
+          "Implicit multiplication is not allowed; write '*' explicitly (e.g. '2*x')",
+          {
+            position: error.position,
+          },
+        ),
+      );
+    }
     return fail(
       reject(
         "EXPRESSION_SYNTAX",
-        `Invalid expression ${JSON.stringify(source)}${
-          typeof position === "number" ? ` near character ${position}` : ""
-        }`,
-        typeof position === "number" ? { position } : undefined,
+        `Invalid expression ${JSON.stringify(source)} near character ${error.position}`,
+        {
+          position: error.position,
+        },
       ),
     );
   }
@@ -127,7 +146,7 @@ function fail(rejection: Rejection): ExpressionResult {
 }
 
 function build(
-  node: MathNode,
+  node: AstNode,
   symbols: Set<string>,
   counter: { nodes: number },
   depth: number,
@@ -147,25 +166,19 @@ function build(
     );
   }
 
-  // `node.type` is a plain string discriminator; the casts below narrow to the node shapes
-  // documented by math.js without importing its node classes.
-  switch (node.type) {
-    case "ConstantNode": {
-      const value = (node as unknown as { value: unknown }).value;
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        throw reject(
-          "EXPRESSION_SYNTAX",
-          `Only finite numbers are allowed as literals; found ${String(JSON.stringify(value) ?? value)}`,
-          {
-            fragment: String(value),
-          },
-        );
+  switch (node.kind) {
+    case "number": {
+      const value = node.value;
+      if (!Number.isFinite(value)) {
+        throw reject("EXPRESSION_SYNTAX", `Number literal is too large: ${String(value)}`, {
+          fragment: String(value),
+        });
       }
       return () => value;
     }
 
-    case "SymbolNode": {
-      const name = (node as unknown as { name: string }).name;
+    case "symbol": {
+      const name = node.name;
       if (Object.hasOwn(CONSTANTS, name)) {
         const value = CONSTANTS[name] as number;
         return () => value;
@@ -177,65 +190,36 @@ function build(
       };
     }
 
-    case "ParenthesisNode": {
-      const content = (node as unknown as { content: MathNode }).content;
-      return build(content, symbols, counter, depth + 1);
+    case "unary": {
+      const operand = build(node.operand, symbols, counter, depth + 1);
+      return node.op === "-" ? (scope) => -operand(scope) : operand;
     }
 
-    case "OperatorNode": {
-      const op = node as unknown as {
-        fn: string;
-        op: string;
-        args: MathNode[];
-        implicit?: boolean;
-      };
-      if (op.implicit) {
-        throw reject(
-          "EXPRESSION_SYNTAX",
-          "Implicit multiplication is not allowed; write '*' explicitly (e.g. '2*x')",
-          {
-            fragment: "implicit multiplication",
-          },
-        );
-      }
-      const args = op.args.map((arg) => build(arg, symbols, counter, depth + 1));
-      if (args.length === 1) {
-        const [a] = args as [Evaluator];
-        if (op.fn === "unaryMinus") return (scope) => -a(scope);
-        if (op.fn === "unaryPlus") return a;
-      }
-      const binary = Object.hasOwn(BINARY, op.fn) ? BINARY[op.fn] : undefined;
-      if (binary && args.length === 2) {
-        const [a, b] = args as [Evaluator, Evaluator];
-        return (scope) => binary(a(scope), b(scope));
-      }
-      throw reject("EXPRESSION_SYNTAX", `Operator '${op.op}' is not supported`, {
-        fragment: op.op,
-      });
+    case "binary": {
+      const left = build(node.left, symbols, counter, depth + 1);
+      const right = build(node.right, symbols, counter, depth + 1);
+      const op = BINARY[node.op];
+      return (scope) => op(left(scope), right(scope));
     }
 
-    case "FunctionNode": {
-      const call = node as unknown as { fn: MathNode; args: MathNode[] };
-      if (call.fn.type !== "SymbolNode") {
-        throw reject("EXPRESSION_SYNTAX", "Only calls to named functions are allowed");
-      }
-      const name = (call.fn as unknown as { name: string }).name;
+    case "call": {
+      const name = node.name;
       const def = Object.hasOwn(FUNCTIONS, name) ? FUNCTIONS[name] : undefined;
       if (!def) {
         throw reject("UNKNOWN_FUNCTION", `Unknown function '${name}'`, { function: name });
       }
-      if (call.args.length < def.minArgs || call.args.length > def.maxArgs) {
+      if (node.args.length < def.minArgs || node.args.length > def.maxArgs) {
         const expected =
           def.minArgs === def.maxArgs ? `${def.minArgs}` : `${def.minArgs} to ${def.maxArgs}`;
         throw reject(
           "EXPRESSION_SYNTAX",
-          `Function '${name}' takes ${expected} argument(s), got ${call.args.length}`,
+          `Function '${name}' takes ${expected} argument(s), got ${node.args.length}`,
           {
             function: name,
           },
         );
       }
-      const args = call.args.map((arg) => build(arg, symbols, counter, depth + 1));
+      const args = node.args.map((arg) => build(arg, symbols, counter, depth + 1));
       const fn = def.fn;
       if (args.length === 1) {
         const [a] = args as [Evaluator];
@@ -247,38 +231,5 @@ function build(
       }
       return (scope) => fn(...args.map((arg) => arg(scope)));
     }
-
-    default:
-      throw reject(
-        "EXPRESSION_SYNTAX",
-        `${describeNode(node.type)} is not allowed in expressions`,
-        {
-          fragment: node.type,
-        },
-      );
-  }
-}
-
-function describeNode(type: string): string {
-  switch (type) {
-    case "AssignmentNode":
-      return "Assignment";
-    case "FunctionAssignmentNode":
-      return "Function definition";
-    case "AccessorNode":
-    case "IndexNode":
-      return "Property or index access";
-    case "ArrayNode":
-      return "A matrix or array";
-    case "ObjectNode":
-      return "An object literal";
-    case "RangeNode":
-      return "A range";
-    case "ConditionalNode":
-      return "A conditional";
-    case "BlockNode":
-      return "A block of statements";
-    default:
-      return `'${type}'`;
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@alumieye/eyeviz-math",
   "version": "0.0.0",
-  "description": "EyeViz safe mathematical expression engine. No eval, no arbitrary code.",
+  "description": "EyeViz safe mathematical expression engine. Own parser and evaluator; no eval, no arbitrary code, no dependencies.",
   "keywords": [
     "eyeviz",
     "math",
@@ -40,9 +40,6 @@
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "check:package": "publint --strict && attw --pack ."
-  },
-  "dependencies": {
-    "mathjs": "^15.2.0"
   },
   "publishConfig": {
     "access": "public",

@@ -1,6 +1,6 @@
 # ADR-0002: Expression engine — math.js parser only, own evaluator
 
-- **Status:** Accepted (Phase 0)
+- **Status:** Superseded by [ADR-0013](0013-hand-written-expression-parser.md) (Phase 2)
 
 ## Context
 

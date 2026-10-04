@@ -1,9 +1,14 @@
+// @vitest-environment jsdom
 import { EyeVizEngine } from "@alumieye/eyeviz-core";
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import {
+  buildGuides,
   computeBounds,
   defaultCameraPosition,
+  disposeGuides,
+  formatTick,
+  niceStep,
   PALETTES,
   resolveTheme,
   SceneGraph,
@@ -26,7 +31,7 @@ const spec = {
 function setup() {
   const engine = new EyeVizEngine(spec, { curveSamples: 128 });
   const graph = new SceneGraph(PALETTES.light);
-  graph.setModel(engine.model, engine.getState(), 0.1);
+  graph.setModel(engine.model, engine.getState(), { scale: 1 });
   engine.subscribe((state, changed) => graph.update(state, changed));
   const byName = (name: string) => graph.root.getObjectByName(name) as THREE.Object3D;
   return { engine, graph, byName };
@@ -84,7 +89,7 @@ describe("SceneGraph", () => {
       objects: [{ id: "P", type: "point", position: ["sqrt(a)", 0, 0] }],
     });
     const graph = new SceneGraph(PALETTES.dark);
-    graph.setModel(engine.model, engine.getState(), 0.1);
+    graph.setModel(engine.model, engine.getState(), { scale: 1 });
     engine.subscribe((s, c) => graph.update(s, c));
     engine.setParameter("a", -1);
     expect(graph.root.getObjectByName("P")?.visible).toBe(false);
@@ -109,7 +114,7 @@ describe("SceneGraph", () => {
       ],
     });
     const graph = new SceneGraph(PALETTES.light);
-    graph.setModel(engine.model, engine.getState(), 0.1);
+    graph.setModel(engine.model, engine.getState(), { scale: 1 });
     engine.subscribe((state, changed) => graph.update(state, changed));
     const curve = graph.root.getObjectByName("w") as THREE.Object3D;
     const { resources, disposed } = trackDisposal(curve);
@@ -133,7 +138,7 @@ describe("SceneGraph", () => {
   it("releases the previous views when a new model is set", () => {
     const { engine, graph } = setup();
     const { resources, disposed } = trackDisposal(graph.root);
-    graph.setModel(engine.model, engine.getState(), 0.1);
+    graph.setModel(engine.model, engine.getState(), { scale: 1 });
     // Everything except the shared sphere geometry is released and recreated.
     const shared = [...resources].filter((r) => r instanceof THREE.SphereGeometry);
     expect(disposed.size).toBe(resources.size - shared.length);
@@ -169,5 +174,126 @@ describe("bounds and camera", () => {
     expect(resolveTheme("auto", true)).toBe("dark");
     expect(resolveTheme("auto", false)).toBe("light");
     expect(resolveTheme("dark", false)).toBe("dark");
+  });
+});
+
+describe("Phase 2 primitives", () => {
+  const spec = {
+    version: "0.1",
+    parameters: [{ id: "k", value: 1 }],
+    objects: [
+      { id: "A", type: "point", position: [0, 0, 0] },
+      { id: "B", type: "point", position: [2, 0, 0] },
+      { id: "C", type: "point", position: [0, 2, 0] },
+      { id: "v", type: "vector", origin: "A", components: [0, 0, "2*k"] },
+      { id: "P", type: "plane", through: ["A", "B", "C"] },
+      {
+        id: "S",
+        type: "surface",
+        variables: ["x", "y"],
+        domain: { x: [-1, 1], y: [-1, 1] },
+        position: ["x", "y", "k*sqrt(x)"],
+      },
+      { id: "lA", type: "label", text: "<b>A</b>", at: "A" },
+    ],
+  };
+
+  function setupAll() {
+    const engine = new EyeVizEngine(spec, { surfaceSamples: 9 });
+    const graph = new SceneGraph(PALETTES.light);
+    graph.setModel(engine.model, engine.getState(), { scale: 2 });
+    engine.subscribe((state, changed) => graph.update(state, changed));
+    return {
+      engine,
+      graph,
+      byName: (n: string) => graph.root.getObjectByName(n) as THREE.Object3D,
+    };
+  }
+
+  it("draws a vector as an arrow pointing along its components", () => {
+    const { engine, byName } = setupAll();
+    const arrow = byName("v");
+    const tip = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion);
+    expect(tip.z).toBeCloseTo(1);
+    engine.setParameter("k", 0); // zero-length vectors are hidden
+    expect(arrow.visible).toBe(false);
+  });
+
+  it("orients a plane along its normal", () => {
+    const { byName } = setupAll();
+    const plane = byName("P");
+    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(plane.quaternion);
+    expect(normal.z).toBeCloseTo(1);
+    expect(plane.scale.x).toBeGreaterThan(0);
+  });
+
+  it("meshes only the defined part of a surface", () => {
+    const { byName } = setupAll();
+    const mesh = byName("S").children[0] as THREE.Mesh;
+    const index = mesh.geometry.getIndex();
+    // sqrt(x) is undefined for x < 0: only cells with 0 <= x are drawn (4 of 8 columns).
+    expect(index?.count).toBe(8 * 4 * 6);
+    const positions = mesh.geometry.getAttribute("position").array as Float32Array;
+    expect([...positions].every(Number.isFinite)).toBe(true);
+  });
+
+  it("renders label text as text, never as HTML", () => {
+    const { byName } = setupAll();
+    const label = byName("lA") as THREE.Object3D & { element: HTMLElement };
+    expect(label.element.textContent).toBe("<b>A</b>");
+    expect(label.element.querySelector("b")).toBeNull();
+  });
+
+  it("releases every resource of every primitive", () => {
+    const { graph } = setupAll();
+    const { resources, disposed } = trackDisposal(graph.root);
+    graph.dispose();
+    expect(disposed.size).toBe(resources.size);
+  });
+});
+
+describe("guides (axes, ticks, grid)", () => {
+  it.each([
+    [10, 2],
+    [1, 0.2],
+    [37, 5],
+    [0.004, 0.001],
+  ])("niceStep(%d) = %d", (extent, step) => {
+    expect(niceStep(extent)).toBeCloseTo(step);
+  });
+
+  it("formats ticks without floating-point noise", () => {
+    expect(formatTick(0.30000000000000004, 0.1)).toBe("0.3");
+    expect(formatTick(-2, 1)).toBe("−2");
+  });
+
+  it("draws x, y and z in 3D, only x and y in 2D, and cleans up", () => {
+    const count = (dimension: "2d" | "3d") => {
+      const group = new THREE.Group();
+      buildGuides(group, { center: [0, 0, 0], radius: 5 }, PALETTES.light, {
+        axes: true,
+        grid: true,
+        dimension,
+      });
+      const names = group.children
+        .filter((c) => "element" in c)
+        .map((c) => (c as unknown as { element: HTMLElement }).element.textContent);
+      const result = { names, children: group.children.length };
+      disposeGuides(group);
+      expect(group.children).toHaveLength(0);
+      return result;
+    };
+    expect(count("3d").names).toEqual(expect.arrayContaining(["x", "y", "z"]));
+    expect(count("2d").names).not.toContain("z");
+  });
+
+  it("can draw nothing", () => {
+    const group = new THREE.Group();
+    buildGuides(group, { center: [0, 0, 0], radius: 5 }, PALETTES.light, {
+      axes: false,
+      grid: false,
+      dimension: "3d",
+    });
+    expect(group.children).toHaveLength(0);
   });
 });

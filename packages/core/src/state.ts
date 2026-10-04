@@ -23,6 +23,21 @@ export interface SegmentState extends ObjectStateBase {
   readonly to: NumberVec3;
 }
 
+export interface VectorState extends ObjectStateBase {
+  readonly type: "vector";
+  readonly origin: NumberVec3;
+  readonly components: NumberVec3;
+}
+
+export interface PlaneState extends ObjectStateBase {
+  readonly type: "plane";
+  readonly center: NumberVec3;
+  /** Unit normal. */
+  readonly normal: NumberVec3;
+  /** Half-size of the drawn square patch; absent = renderer chooses from the scene size. */
+  readonly extent?: number;
+}
+
 export interface CurveState extends ObjectStateBase {
   readonly type: "curve";
   /**
@@ -32,7 +47,24 @@ export interface CurveState extends ObjectStateBase {
   readonly polylines: readonly Float64Array[];
 }
 
-export type ObjectState = PointState | SegmentState | CurveState;
+export interface SurfaceState extends ObjectStateBase {
+  readonly type: "surface";
+  /** Grid samples along the second variable (0 while hidden). */
+  readonly rows: number;
+  /** Grid samples along the first variable (0 while hidden). */
+  readonly columns: number;
+  /** Row-major `x, y, z` per grid vertex; `NaN` where the surface is undefined. */
+  readonly positions: Float64Array;
+}
+
+export interface LabelState extends ObjectStateBase {
+  readonly type: "label";
+  readonly text: string;
+  readonly position: NumberVec3;
+}
+
+export type ObjectState =
+  PointState | SegmentState | VectorState | PlaneState | CurveState | SurfaceState | LabelState;
 
 export interface SceneState {
   /** Scene time in seconds. */

@@ -18,12 +18,24 @@ export {
   type StateListener,
 } from "./engine";
 export { MAX_DOMAIN_MAGNITUDE } from "./evaluate";
-export { sampleCurve, type CurveFunction } from "./sampling";
+export {
+  sampleCurve,
+  sampleSurface,
+  type CurveFunction,
+  type SurfaceFunction,
+  type SurfaceGrid,
+} from "./sampling";
 export type { SceneRenderer } from "./renderer";
 export {
   TIME_SYMBOL,
+  type AnchorModel,
   type BooleanParameterModel,
   type CurveModel,
+  type LabelModel,
+  type PlaneModel,
+  type SceneSettingsModel,
+  type SurfaceModel,
+  type VectorModel,
   type NumberParameterModel,
   type ObjectModel,
   type ParameterModel,
@@ -34,5 +46,15 @@ export {
   type Vec3Model,
   type VisibilityModel,
 } from "./model";
-export type { CurveState, ObjectState, PointState, SceneState, SegmentState } from "./state";
+export type {
+  CurveState,
+  LabelState,
+  ObjectState,
+  PlaneState,
+  PointState,
+  SceneState,
+  SegmentState,
+  SurfaceState,
+  VectorState,
+} from "./state";
 export type { CompiledExpression } from "@alumieye/eyeviz-math";

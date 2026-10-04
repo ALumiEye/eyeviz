@@ -6,10 +6,13 @@ test checks.
 
 Current examples:
 
-| File                   | Validates                                                       |
-| ---------------------- | --------------------------------------------------------------- |
-| `points-segments.json` | points, segment references, parameter propagation, degree units |
-| `sine-curve.json`      | curve sampling, parameters inside expressions                   |
-| `helix.json`           | 3D parametric curve                                             |
+| File                   | Shows                                                         |
+| ---------------------- | ------------------------------------------------------------- |
+| `points-segments.json` | points, segments, labels, parameter propagation, degree units |
+| `sine-curve.json`      | a 2D graph with axes and ticks, parameters inside expressions |
+| `vectors.json`         | vector addition in 2D, labels at computed positions, toggles  |
+| `pyramid.json`         | 3D geometry: a pyramid, a plane through three points          |
+| `paraboloid.json`      | a surface z = f(x, y) and a point moving on it                |
+| `helix.json`           | a 3D parametric curve whose domain depends on a parameter     |
 
-Later phases add vectors, surfaces, projectile motion and a harmonic oscillator.
+Phase 3 adds animated examples (projectile motion, harmonic oscillator).

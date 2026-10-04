@@ -1,0 +1,111 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Vector addition",
+    "description": "Vectors a and b from the origin and their sum a + b, completed into a parallelogram.",
+    "lang": "en"
+  },
+  "scene": { "dimension": "2d" },
+  "parameters": [
+    {
+      "id": "ax",
+      "value": 3,
+      "min": -5,
+      "max": 5,
+      "step": 0.1,
+      "label": "a — x component",
+      "control": "slider"
+    },
+    {
+      "id": "ay",
+      "value": 1,
+      "min": -5,
+      "max": 5,
+      "step": 0.1,
+      "label": "a — y component",
+      "control": "slider"
+    },
+    {
+      "id": "bx",
+      "value": 1,
+      "min": -5,
+      "max": 5,
+      "step": 0.1,
+      "label": "b — x component",
+      "control": "slider"
+    },
+    {
+      "id": "by",
+      "value": 2.5,
+      "min": -5,
+      "max": 5,
+      "step": 0.1,
+      "label": "b — y component",
+      "control": "slider"
+    },
+    { "id": "showSum", "value": true, "label": "Show a + b", "control": "toggle" }
+  ],
+  "objects": [
+    {
+      "id": "a",
+      "type": "vector",
+      "name": "Vector a",
+      "components": ["ax", "ay", 0],
+      "color": "#e8590c"
+    },
+    {
+      "id": "b",
+      "type": "vector",
+      "name": "Vector b",
+      "components": ["bx", "by", 0],
+      "color": "#1c7ed6"
+    },
+    {
+      "id": "sum",
+      "type": "vector",
+      "name": "Vector a + b",
+      "components": ["ax + bx", "ay + by", 0],
+      "visible": "showSum"
+    },
+    {
+      "id": "A",
+      "type": "point",
+      "name": "Tip of a",
+      "position": ["ax", "ay", 0],
+      "visible": "showSum"
+    },
+    {
+      "id": "B",
+      "type": "point",
+      "name": "Tip of b",
+      "position": ["bx", "by", 0],
+      "visible": "showSum"
+    },
+    {
+      "id": "S",
+      "type": "point",
+      "name": "Tip of a + b",
+      "position": ["ax + bx", "ay + by", 0],
+      "visible": "showSum"
+    },
+    {
+      "id": "AS",
+      "type": "segment",
+      "from": "A",
+      "to": "S",
+      "visible": "showSum",
+      "color": "#adb5bd"
+    },
+    {
+      "id": "BS",
+      "type": "segment",
+      "from": "B",
+      "to": "S",
+      "visible": "showSum",
+      "color": "#adb5bd"
+    },
+    { "id": "la", "type": "label", "text": "a", "at": ["ax/2", "ay/2", 0], "color": "#e8590c" },
+    { "id": "lb", "type": "label", "text": "b", "at": ["bx/2", "by/2", 0], "color": "#1c7ed6" },
+    { "id": "lsum", "type": "label", "text": "a + b", "at": "S", "visible": "showSum" }
+  ]
+}

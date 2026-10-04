@@ -13,12 +13,12 @@ so an expression is **data describing a mathematical formula**, never code.
 
 ```
 expression string
-      │  length limit
+      │  length limit, single formula (no ";" or newlines)
       ▼
-parse (math.js parser, used only to build an AST)
+EyeViz parser → EyeViz AST          nesting-depth limit while parsing
       │
       ▼
-whitelist walk ── rejects any node type, operator or function not listed below
+whitelist walk ── rejects functions not listed below, wrong arity, non-finite literals
       │  node-count and depth limits
       ▼
 symbol extraction + validation against the scope of the field (done by core)
@@ -30,10 +30,10 @@ compile to an EyeViz evaluator (plain closures over the validated AST)
 evaluate(scope) → number   (may be NaN or ±Infinity; never throws for numeric reasons)
 ```
 
-math.js is used **only for parsing**. Its `evaluate`/`compile` functions are never called,
-and no part of the codebase outside `@alumieye/eyeviz-math` imports math.js. No `eval`,
-`new Function`, dynamic `import()` or property access on host objects happens anywhere.
-See [ADR-0002](adr/0002-expression-engine.md).
+The parser is hand-written and has no dependencies
+([ADR-0013](adr/0013-hand-written-expression-parser.md)). Anything outside the grammar is a
+syntax error by construction. No `eval`, `new Function`, dynamic `import()` or property access
+on host objects happens anywhere.
 
 ## Grammar (v0.1)
 

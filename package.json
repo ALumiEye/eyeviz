@@ -32,6 +32,7 @@
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
+    "jsdom": "^30.1.2",
     "prettier": "^3.9.9",
     "publint": "^0.3.25",
     "tsup": "^8.5.1",

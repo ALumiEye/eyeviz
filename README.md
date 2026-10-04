@@ -6,9 +6,10 @@ EyeViz is an open-source interactive STEM visualization engine by ALumiEye.
 
 _From equations to interactive visualizations._
 
-> **Project status: Phase 1 — core vertical slice.** Scene Spec v0.1 (points, segments,
-> curves, parameters), validation, the safe expression engine, the deterministic runtime, the
-> Three.js renderer, React integration and the playground work end to end. Nothing is
+> **Project status: Phase 2 — mathematical primitives.** Scene Spec v0.1 covers points,
+> segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes and
+> axes with ticks. Validation, the dependency-free expression engine, the deterministic runtime,
+> the Three.js renderer, React integration and the playground work end to end. Nothing is
 > published to npm yet; all APIs are **experimental** until the first release.
 
 ## What EyeViz is
@@ -21,7 +22,8 @@ entirely in the browser.
 Model → Scene Specification → EyeViz Core → Renderer → Interactive Scene
 ```
 
-- **Declarative.** A scene is JSON: parameters, points, segments, curves… No code.
+- **Declarative.** A scene is JSON: parameters, points, vectors, planes, curves, surfaces,
+  labels… No code.
 - **Deterministic.** The same spec, parameters and time always produce the same scene.
 - **Safe.** Specs are untrusted input. Expressions such as `v0*cos(theta)*t` are parsed and
   evaluated by a whitelisted math engine — never by `eval`.
@@ -148,7 +150,7 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm check:boundari
 | ----- | --------------------------------------------------------------------------- | ------- |
 | 0     | Architecture foundation                                                     | Done    |
 | 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done    |
-| 2     | Vectors, planes, surfaces, labels, axes                                     | Planned |
+| 2     | Vectors, planes, surfaces, labels, axes, 2D scenes                          | Done    |
 | 3     | Timeline and animation                                                      | Planned |
 | 4     | Steps, highlight, focus                                                     | Planned |
 | 5     | Direct manipulation                                                         | Planned |

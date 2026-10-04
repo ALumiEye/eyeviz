@@ -23,6 +23,15 @@ export interface SceneMetadata {
   readonly lang?: string;
 }
 
+export interface SceneSettings {
+  /** `"2d"`: the x–y plane seen from +z, rotation locked. Default `"3d"`. */
+  readonly dimension?: "2d" | "3d";
+  /** Show coordinate axes with ticks. Default `true`. */
+  readonly axes?: boolean;
+  /** Show a grid on the z = 0 plane. Default `true`. */
+  readonly grid?: boolean;
+}
+
 export interface CameraSpec {
   readonly position?: NumberVec3;
   readonly target?: NumberVec3;
@@ -79,6 +88,30 @@ export interface SegmentSpec extends ObjectSpecBase {
   readonly to: string;
 }
 
+/** A point ID, or an inline position. */
+export type Anchor = string | Vec3;
+
+export interface VectorSpec extends ObjectSpecBase {
+  readonly type: "vector";
+  /** Where the arrow starts. Default the origin `[0, 0, 0]`. */
+  readonly origin?: Anchor;
+  /** Displacement from the origin to the arrow tip. */
+  readonly components: Vec3;
+}
+
+/**
+ * A plane, given either `through` three points or by a `point` and a `normal`.
+ * Planes are infinite; `extent` is the half-size of the square patch that is drawn
+ * (default: chosen from the scene size).
+ */
+export interface PlaneSpec extends ObjectSpecBase {
+  readonly type: "plane";
+  readonly through?: readonly [string, string, string];
+  readonly point?: Anchor;
+  readonly normal?: Vec3;
+  readonly extent?: Scalar;
+}
+
 export interface CurveSpec extends ObjectSpecBase {
   readonly type: "curve";
   /** Name of the curve's own variable, local to `position`. */
@@ -89,13 +122,31 @@ export interface CurveSpec extends ObjectSpecBase {
   readonly position: Vec3;
 }
 
-export type SceneObjectSpec = PointSpec | SegmentSpec | CurveSpec;
+/** A parametric surface `position(u, v)` for `u, v` in their domains. */
+export interface SurfaceSpec extends ObjectSpecBase {
+  readonly type: "surface";
+  readonly variables: readonly [string, string];
+  /** One `[start, end]` per variable, keyed by variable name. */
+  readonly domain: Readonly<Record<string, readonly [Scalar, Scalar]>>;
+  readonly position: Vec3;
+}
+
+/** Plain text shown at a point or position. Never interpreted as HTML. */
+export interface LabelSpec extends ObjectSpecBase {
+  readonly type: "label";
+  readonly text: string;
+  readonly at: Anchor;
+}
+
+export type SceneObjectSpec =
+  PointSpec | SegmentSpec | VectorSpec | PlaneSpec | CurveSpec | SurfaceSpec | LabelSpec;
 
 export type SceneObjectType = SceneObjectSpec["type"];
 
 export interface SceneSpec {
   readonly version: "0.1";
   readonly metadata?: SceneMetadata;
+  readonly scene?: SceneSettings;
   readonly camera?: CameraSpec;
   readonly parameters?: readonly ParameterSpec[];
   readonly objects: readonly SceneObjectSpec[];

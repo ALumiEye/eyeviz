@@ -5,7 +5,10 @@
     "description": "Triangle ABC. Vertex C sits at distance r from A at angle theta, raised to height h. Moving a point moves every segment attached to it.",
     "lang": "en"
   },
-  "camera": { "position": [3, -9, 6], "target": [2, 1, 1] },
+  "camera": {
+    "position": [3, -9, 6],
+    "target": [2, 1, 1]
+  },
   "parameters": [
     {
       "id": "theta",
@@ -35,11 +38,26 @@
       "label": "Height h",
       "control": "slider"
     },
-    { "id": "showSides", "value": true, "label": "Show sides AC and BC", "control": "toggle" }
+    {
+      "id": "showSides",
+      "value": true,
+      "label": "Show sides AC and BC",
+      "control": "toggle"
+    }
   ],
   "objects": [
-    { "id": "A", "type": "point", "name": "Point A", "position": [0, 0, 0] },
-    { "id": "B", "type": "point", "name": "Point B", "position": [4, 0, 0] },
+    {
+      "id": "A",
+      "type": "point",
+      "name": "Point A",
+      "position": [0, 0, 0]
+    },
+    {
+      "id": "B",
+      "type": "point",
+      "name": "Point B",
+      "position": [4, 0, 0]
+    },
     {
       "id": "C",
       "type": "point",
@@ -47,7 +65,13 @@
       "position": ["r*cos(theta)", "r*sin(theta)", "h"],
       "color": "#d6336c"
     },
-    { "id": "AB", "type": "segment", "name": "Side AB", "from": "A", "to": "B" },
+    {
+      "id": "AB",
+      "type": "segment",
+      "name": "Side AB",
+      "from": "A",
+      "to": "B"
+    },
     {
       "id": "AC",
       "type": "segment",
@@ -63,6 +87,24 @@
       "from": "B",
       "to": "C",
       "visible": "showSides"
+    },
+    {
+      "id": "lA",
+      "type": "label",
+      "text": "A",
+      "at": "A"
+    },
+    {
+      "id": "lB",
+      "type": "label",
+      "text": "B",
+      "at": "B"
+    },
+    {
+      "id": "lC",
+      "type": "label",
+      "text": "C",
+      "at": "C"
     }
   ]
 }

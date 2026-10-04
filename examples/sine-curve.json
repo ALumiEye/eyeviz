@@ -5,7 +5,11 @@
     "description": "The graph of y = a·sin(k·x + φ) for x from −2π to 2π, with a point P on the curve at x = x0.",
     "lang": "en"
   },
-  "camera": { "position": [0, -14, 5], "target": [0, 0, 0] },
+  "scene": {
+    "dimension": "2d",
+    "axes": true,
+    "grid": true
+  },
   "parameters": [
     {
       "id": "a",
@@ -60,7 +64,23 @@
       "name": "Point P on the wave",
       "position": ["x0", "a*sin(k*x0 + phi)", 0]
     },
-    { "id": "P0", "type": "point", "name": "Foot of P on the x-axis", "position": ["x0", 0, 0] },
-    { "id": "PP0", "type": "segment", "from": "P0", "to": "P" }
+    {
+      "id": "P0",
+      "type": "point",
+      "name": "Foot of P on the x-axis",
+      "position": ["x0", 0, 0]
+    },
+    {
+      "id": "PP0",
+      "type": "segment",
+      "from": "P0",
+      "to": "P"
+    },
+    {
+      "id": "lP",
+      "type": "label",
+      "text": "P",
+      "at": "P"
+    }
   ]
 }
