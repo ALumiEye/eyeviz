@@ -1,0 +1,97 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Harmonic oscillator",
+    "description": "A mass oscillating as x(t) = A·cos(ω·t + φ). Left: the mass moving up and down about its equilibrium. Right: the graph of x against time, drawn as time runs; the faint curve shows two full periods.",
+    "lang": "en"
+  },
+  "scene": { "dimension": "2d" },
+  "timeline": { "duration": "4*pi/omega", "loop": true, "autoplay": false },
+  "parameters": [
+    {
+      "id": "A",
+      "value": 2,
+      "min": 0.5,
+      "max": 3,
+      "step": 0.1,
+      "label": "Amplitude A",
+      "control": "slider"
+    },
+    {
+      "id": "omega",
+      "value": 2,
+      "min": 0.5,
+      "max": 6,
+      "step": 0.1,
+      "label": "Angular frequency ω (rad/s)",
+      "control": "slider"
+    },
+    {
+      "id": "phi",
+      "value": 0,
+      "unit": "deg",
+      "min": -180,
+      "max": 180,
+      "step": 5,
+      "label": "Phase φ",
+      "control": "slider"
+    }
+  ],
+  "objects": [
+    {
+      "id": "anchor",
+      "type": "point",
+      "name": "Spring anchor",
+      "position": [-2, 4, 0],
+      "color": "#868e96"
+    },
+    {
+      "id": "mass",
+      "type": "point",
+      "name": "Mass",
+      "position": [-2, "A*cos(omega*t + phi)", 0],
+      "color": "#e8590c"
+    },
+    {
+      "id": "spring",
+      "type": "segment",
+      "name": "Spring",
+      "from": "anchor",
+      "to": "mass",
+      "color": "#868e96"
+    },
+    {
+      "id": "periods",
+      "type": "curve",
+      "name": "Two periods of x(t)",
+      "variable": "s",
+      "domain": [0, "4*pi/omega"],
+      "position": ["s", "A*cos(omega*s + phi)", 0],
+      "color": "#495057"
+    },
+    {
+      "id": "graph",
+      "type": "curve",
+      "name": "x(t) so far",
+      "variable": "s",
+      "domain": [0, "t"],
+      "position": ["s", "A*cos(omega*s + phi)", 0]
+    },
+    {
+      "id": "now",
+      "type": "point",
+      "name": "Current x(t)",
+      "position": ["t", "A*cos(omega*t + phi)", 0]
+    },
+    {
+      "id": "link",
+      "type": "segment",
+      "name": "Same height",
+      "from": "mass",
+      "to": "now",
+      "color": "#adb5bd"
+    },
+    { "id": "lm", "type": "label", "text": "m", "at": "mass" },
+    { "id": "lx", "type": "label", "text": "x(t)", "at": "now" }
+  ]
+}

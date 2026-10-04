@@ -29,6 +29,7 @@ export type {
   PlaneSpec,
   SceneSettings,
   SurfaceSpec,
+  TimelineSpec,
   VectorSpec,
   Vec3,
 } from "./types";

@@ -141,7 +141,7 @@ engine.getParameters(); // definitions, for generating controls
 engine.setParameter("theta", 60); // clamped to [min, max]
 engine.setParameters({ r: 2, theta: 45 }); // one update
 engine.setTime(1.5);
-const state = engine.getState();
+const state = engine.getState(); // includes state.duration when the scene has a timeline
 const unsubscribe = engine.subscribe((state, changed) => {
   /* changed: Set<objectId> */
 });
@@ -182,7 +182,9 @@ Given identical spec, parameter values and time, the engine produces identical s
 Consequences:
 
 - No wall-clock time, randomness or global mutable state in `core`.
-- Playback (Phase 3) only ever calls `setTime(t)`; the frame clock lives in renderers/UI.
+- Playback only ever calls `setTime(t)`. `Playback` (in core) handles play/pause/seek/speed/loop
+  and receives animation frames from an injected `FrameScheduler`, so core never touches
+  `requestAnimationFrame`. `mount()` and React's `usePlayback()` supply the browser scheduler.
 - The guarantee holds **within one JavaScript runtime**. Engines may differ in the last bit
   of `Math.sin` and friends, so cross-browser bit-equality is not promised.
 

@@ -32,7 +32,7 @@ renderer.setModel(engine.model, engine.getState());
 engine.subscribe((state, changed) => renderer.update(state, changed));
 ```
 
-`mount(container, spec, options)` does exactly this and returns `{ engine, renderer, dispose }`.
+`mount(container, spec, options)` does exactly this and returns `{ engine, renderer, playback, dispose }`.
 It is the framework-agnostic entry point for Angular, Vue or plain HTML.
 
 When `setModel` receives a new model (e.g. the spec was edited), the renderer keeps the

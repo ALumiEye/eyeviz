@@ -7,6 +7,7 @@
  */
 export { ThreeRenderer, type ThreeRendererOptions } from "./three-renderer";
 export { mount, type EyeVizMount, type MountOptions } from "./mount";
+export { browserScheduler, prefersReducedMotion } from "./browser";
 export { SceneGraph } from "./scene-graph";
 export { computeBounds, defaultCameraPosition, formatTick, niceStep, type Bounds } from "./bounds";
 export { buildGuides, disposeGuides, guideExtent, type GuideOptions } from "./axes";

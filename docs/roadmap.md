@@ -8,7 +8,7 @@ block them; they are **not commitments**.
 | 0     | Architecture foundation  | **Done**    |
 | 1     | Core vertical slice      | **Done**    |
 | 2     | Mathematical primitives  | **Done**    |
-| 3     | Parameters and animation | Planned     |
+| 3     | Parameters and animation | **Done**    |
 | 4     | Educational interactions | Planned     |
 | 5     | Direct manipulation      | Planned     |
 | 6     | Visual authoring         | Planned     |
@@ -62,8 +62,13 @@ discontinuity detection.
 
 ## Phase 3 — Parameters and animation
 
-Timeline (play/pause/reset/seek), decision on `behaviors` vs plain `t` expressions.
-Examples: projectile motion, harmonic oscillator.
+- [x] Generated parameter controls (sliders, number inputs, toggles) — since Phase 1
+- [x] `timeline` — duration (may depend on parameters), loop, autoplay
+- [x] Decision: no `behaviors`; motion is expressions in `t` ([ADR-0016](adr/0016-time-driven-by-expressions.md))
+- [x] `Playback` in core: play, pause, reset, seek, speed; injected frame scheduler
+- [x] `mount()` returns `playback`; React `usePlayback()`; autoplay respects reduced motion
+- [x] Playground timeline bar: play/pause, reset, scrubber, time readout, speed
+- [x] Examples: projectile motion, harmonic oscillator
 
 ## Phase 4 — Educational interactions
 

@@ -46,6 +46,11 @@ interface Base {
   readonly visible: boolean;
 }
 
+/** Evaluates a scalar outside of object evaluation (e.g. the timeline duration). */
+export function evaluateStandalone(scalar: ScalarModel, scope: ExpressionScope): number {
+  return evaluateScalar(scalar, scope);
+}
+
 export function evaluateObject(model: ObjectModel, context: EvaluationContext): ObjectState {
   const visible =
     model.visible.kind === "constant"
@@ -285,6 +290,10 @@ function evaluateCurve(model: CurveModel, base: Base, context: EvaluationContext
 
   const start = evaluateScalar(model.domain[0], context.scope);
   const end = evaluateScalar(model.domain[1], context.scope);
+  // An empty domain (e.g. [0, t] at t = 0) is valid: nothing to draw yet.
+  if (start === end && Number.isFinite(start)) {
+    return Object.freeze({ ...state, valid: true, issues: EMPTY, polylines: [] });
+  }
   const issue = domainIssue(start, end, model.id, `objects[${model.index}].domain`);
   if (issue) {
     return Object.freeze({ ...state, valid: false, issues: Object.freeze([issue]), polylines: [] });

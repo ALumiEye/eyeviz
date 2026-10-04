@@ -14,5 +14,3 @@ Current examples:
 | `pyramid.json`         | 3D geometry: a pyramid, a plane through three points          |
 | `paraboloid.json`      | a surface z = f(x, y) and a point moving on it                |
 | `helix.json`           | a 3D parametric curve whose domain depends on a parameter     |
-
-Phase 3 adds animated examples (projectile motion, harmonic oscillator).

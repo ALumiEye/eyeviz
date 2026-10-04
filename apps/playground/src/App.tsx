@@ -7,6 +7,7 @@ import { SpecEditor } from "./editor/SpecEditor";
 import { EXAMPLES } from "./examples";
 import { formatJson } from "./format";
 import { ParameterControls } from "./ParameterControls";
+import { TimelineBar } from "./TimelineBar";
 
 const REPOSITORY_URL = "https://github.com/ALumiEye/eyeviz";
 const EDIT_DEBOUNCE_MS = 200;
@@ -27,6 +28,8 @@ function createEngine(model: SceneModel, previous: EyeVizEngine | null): EyeVizE
       }
     }
     engine.setParameters(carried);
+    // Keep the moment being looked at while the spec is edited.
+    if (engine.model.animated) engine.setTime(previous.getTime());
   }
   return engine;
 }
@@ -166,6 +169,7 @@ export function App() {
               <p className="muted empty">Fix the issues to see the scene.</p>
             )}
           </div>
+          {engine?.model.animated ? <TimelineBar engine={engine} /> : null}
         </section>
 
         <section className="pane pane-issues" aria-labelledby="issues-title">

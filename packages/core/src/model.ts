@@ -84,6 +84,15 @@ export interface LabelModel extends ObjectModelBase {
 export type ObjectModel =
   PointModel | SegmentModel | VectorModel | PlaneModel | CurveModel | SurfaceModel | LabelModel;
 
+export interface TimelineModel {
+  /** Seconds; may depend on parameters (never on `t`). Absent = time runs on. */
+  readonly duration?: ScalarModel;
+  readonly loop: boolean;
+  readonly autoplay: boolean;
+  /** Parameters the duration depends on. */
+  readonly dependencies: ReadonlySet<string>;
+}
+
 /** Scene settings with defaults applied. */
 export interface SceneSettingsModel {
   readonly dimension: "2d" | "3d";
@@ -122,6 +131,9 @@ export interface SceneModel {
   readonly metadata: SceneMetadata;
   readonly scene: SceneSettingsModel;
   readonly camera?: CameraSpec;
+  readonly timeline?: TimelineModel;
+  /** True if anything depends on time `t` or a timeline is declared: offer playback. */
+  readonly animated: boolean;
   /** In spec order. */
   readonly parameters: ReadonlyMap<string, ParameterModel>;
   /** In spec order. */

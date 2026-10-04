@@ -69,6 +69,8 @@ export type ObjectState =
 export interface SceneState {
   /** Scene time in seconds. */
   readonly time: number;
+  /** Timeline duration in seconds for the current parameters, if the scene declares one. */
+  readonly duration?: number;
   /**
    * Parameter values in their declared units (a `"deg"` parameter reports degrees).
    * Keeps its identity while parameters are unchanged, so UIs can subscribe cheaply.

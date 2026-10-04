@@ -19,6 +19,12 @@ export {
 } from "./engine";
 export { MAX_DOMAIN_MAGNITUDE } from "./evaluate";
 export {
+  Playback,
+  type FrameScheduler,
+  type PlaybackListener,
+  type PlaybackStatus,
+} from "./playback";
+export {
   sampleCurve,
   sampleSurface,
   type CurveFunction,
@@ -35,6 +41,7 @@ export {
   type PlaneModel,
   type SceneSettingsModel,
   type SurfaceModel,
+  type TimelineModel,
   type VectorModel,
   type NumberParameterModel,
   type ObjectModel,

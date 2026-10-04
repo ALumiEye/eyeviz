@@ -6,11 +6,11 @@ EyeViz is an open-source interactive STEM visualization engine by ALumiEye.
 
 _From equations to interactive visualizations._
 
-> **Project status: Phase 2 — mathematical primitives.** Scene Spec v0.1 covers points,
-> segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes and
-> axes with ticks. Validation, the dependency-free expression engine, the deterministic runtime,
-> the Three.js renderer, React integration and the playground work end to end. Nothing is
-> published to npm yet; all APIs are **experimental** until the first release.
+> **Project status: Phase 3 — parameters and animation.** Scene Spec v0.1 covers points,
+> segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes, axes,
+> and motion over time (play, pause, seek, loop). Validation, the dependency-free expression
+> engine, the deterministic runtime, the Three.js renderer, React integration and the
+> playground work end to end. Nothing is published to npm yet; all APIs are **experimental**.
 
 ## What EyeViz is
 
@@ -80,6 +80,7 @@ import { mount } from "@alumieye/eyeviz/three";
 
 const view = mount(document.getElementById("scene")!, scene);
 view.engine.setParameter("theta", 45);
+view.playback.play(); // for scenes that use time t
 view.dispose();
 ```
 
@@ -151,7 +152,7 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm check:boundari
 | 0     | Architecture foundation                                                     | Done    |
 | 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done    |
 | 2     | Vectors, planes, surfaces, labels, axes, 2D scenes                          | Done    |
-| 3     | Timeline and animation                                                      | Planned |
+| 3     | Timeline and animation                                                      | Done    |
 | 4     | Steps, highlight, focus                                                     | Planned |
 | 5     | Direct manipulation                                                         | Planned |
 | 6     | Visual editor                                                               | Planned |

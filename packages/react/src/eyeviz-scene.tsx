@@ -3,6 +3,7 @@ import type { ThreeRenderer, ThreeRendererOptions } from "@alumieye/eyeviz-rende
 import type { EyeVizIssue } from "@alumieye/eyeviz-spec";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useEyeViz } from "./use-eyeviz";
+import { usePlayback } from "./use-playback";
 
 export interface EyeVizSceneProps extends ThreeRendererOptions {
   /** A Scene Spec (untrusted input is fine). Ignored when `engine` is given. */
@@ -15,6 +16,12 @@ export interface EyeVizSceneProps extends ThreeRendererOptions {
    * Default `true`.
    */
   readonly lazy?: boolean;
+  /**
+   * Start playing when shown. Defaults to the spec's `timeline.autoplay`; never under reduced
+   * motion. Only applies when the component owns the engine (`spec` prop); with `engine`, use
+   * `usePlayback` yourself.
+   */
+  readonly autoplay?: boolean;
   /** Called with validation issues whenever `spec` changes. */
   readonly onIssues?: (issues: readonly EyeVizIssue[]) => void;
   readonly className?: string;
@@ -55,11 +62,15 @@ export function EyeVizScene(props: EyeVizSceneProps) {
     className,
     style,
   } = props;
-  const { theme, axes, grid, background, maxPixelRatio } = props;
+  const { theme, axes, grid, background, maxPixelRatio, autoplay } = props;
 
   const own = useEyeViz(externalEngine === undefined ? spec : null, engineOptions);
   const engine = externalEngine === undefined ? own.engine : externalEngine;
   const issues = externalEngine === undefined ? own.issues : undefined;
+  usePlayback(
+    externalEngine === undefined ? own.engine : null,
+    autoplay !== undefined ? { autoplay } : {},
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [renderer, setRenderer] = useState<ThreeRenderer | null>(null);

@@ -1,6 +1,7 @@
 import { EyeVizError, type EyeVizIssue } from "@alumieye/eyeviz-spec";
 import { compileScene, isSceneModel } from "./compile";
-import { evaluateObject, type EvaluationContext } from "./evaluate";
+import { evaluateObject, evaluateStandalone, type EvaluationContext } from "./evaluate";
+import type { ExpressionScope } from "@alumieye/eyeviz-math";
 import { TIME_SYMBOL, type ObjectModel, type ParameterModel, type SceneModel } from "./model";
 import type { ObjectState, SceneState } from "./state";
 
@@ -43,6 +44,7 @@ export class EyeVizEngine {
   readonly #parameterList: readonly ParameterModel[];
   readonly #listeners = new Set<StateListener>();
   #values: Record<string, number | boolean>;
+  #durationResult: DurationResult = NO_DURATION;
   #state: SceneState;
 
   /**
@@ -219,13 +221,36 @@ export class EyeVizEngine {
       objects[id] = evaluateObject(this.model.objects.get(id) as ObjectModel, context);
     }
 
+    const timeline = this.model.timeline;
+    const durationChanged =
+      !previous || [...(changedSymbols ?? [])].some((s) => timeline?.dependencies.has(s));
+    const duration = durationChanged ? this.#duration(scope) : this.#durationResult;
+    this.#durationResult = duration;
+    const issues = collectIssues(objects, this.model.order);
+
     const state: SceneState = Object.freeze({
       time,
       parameters: previous && previous.parameters === values ? previous.parameters : values,
       objects: Object.freeze(objects),
-      issues: collectIssues(objects, this.model.order),
+      issues: duration.issue ? Object.freeze([...issues, duration.issue]) : issues,
+      ...(duration.value !== undefined ? { duration: duration.value } : {}),
     });
     return { state, changed: affected ?? new Set(this.model.order) };
+  }
+
+  /** The timeline duration for the current parameters; invalid values are reported, not thrown. */
+  #duration(scope: ExpressionScope): DurationResult {
+    const scalar = this.model.timeline?.duration;
+    if (!scalar) return NO_DURATION;
+    const value = evaluateStandalone(scalar, scope);
+    if (Number.isFinite(value) && value > 0) return Object.freeze({ value });
+    return Object.freeze({
+      issue: {
+        code: "EXPRESSION_EVALUATION" as const,
+        message: `The timeline duration must be a positive number, got ${String(value)} for the current parameters`,
+        path: "timeline.duration",
+      },
+    });
   }
 
   /** Objects that (transitively) depend on any of `symbols`. */
@@ -244,6 +269,13 @@ export class EyeVizEngine {
     return affected;
   }
 }
+
+interface DurationResult {
+  readonly value?: number;
+  readonly issue?: EyeVizIssue;
+}
+
+const NO_DURATION: DurationResult = Object.freeze({});
 
 function collectIssues(
   objects: Readonly<Record<string, ObjectState>>,

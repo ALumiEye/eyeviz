@@ -32,6 +32,19 @@ export interface SceneSettings {
   readonly grid?: boolean;
 }
 
+/**
+ * Playback of scene time `t`. Motion itself is written as expressions in `t`; the timeline
+ * only says how a player should run time. See docs/adr/0016-time-driven-by-expressions.md.
+ */
+export interface TimelineSpec {
+  /** Seconds. May depend on parameters (e.g. a flight time). Without it, time runs on. */
+  readonly duration?: Scalar;
+  /** Restart from 0 at the end. Default `false` (stop at the end). */
+  readonly loop?: boolean;
+  /** Start playing when shown (players respect reduced-motion preferences). Default `false`. */
+  readonly autoplay?: boolean;
+}
+
 export interface CameraSpec {
   readonly position?: NumberVec3;
   readonly target?: NumberVec3;
@@ -148,6 +161,7 @@ export interface SceneSpec {
   readonly metadata?: SceneMetadata;
   readonly scene?: SceneSettings;
   readonly camera?: CameraSpec;
+  readonly timeline?: TimelineSpec;
   readonly parameters?: readonly ParameterSpec[];
   readonly objects: readonly SceneObjectSpec[];
 }

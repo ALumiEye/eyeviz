@@ -7,3 +7,4 @@
  */
 export { EyeVizScene, type EyeVizSceneProps } from "./eyeviz-scene";
 export { useEyeViz, useEyeVizState, type UseEyeVizResult } from "./use-eyeviz";
+export { usePlayback, type UsePlaybackOptions, type UsePlaybackResult } from "./use-playback";

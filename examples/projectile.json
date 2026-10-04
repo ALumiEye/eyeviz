@@ -1,0 +1,76 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Projectile motion",
+    "description": "A ball launched at speed v0 and angle θ under gravity g, ignoring air resistance. The faint curve is the full trajectory, the bright one the path travelled so far; the arrow is the velocity.",
+    "lang": "en"
+  },
+  "scene": { "dimension": "2d" },
+  "timeline": { "duration": "2*v0*sin(theta)/g", "loop": true },
+  "parameters": [
+    {
+      "id": "v0",
+      "value": 12,
+      "min": 2,
+      "max": 20,
+      "step": 0.5,
+      "label": "Launch speed v0 (m/s)",
+      "control": "slider"
+    },
+    {
+      "id": "theta",
+      "value": 50,
+      "unit": "deg",
+      "min": 5,
+      "max": 85,
+      "step": 1,
+      "label": "Launch angle θ",
+      "control": "slider"
+    },
+    {
+      "id": "g",
+      "value": 9.81,
+      "min": 1,
+      "max": 25,
+      "step": 0.01,
+      "label": "Gravity g (m/s²)",
+      "control": "slider"
+    },
+    { "id": "showVelocity", "value": true, "label": "Show velocity", "control": "toggle" }
+  ],
+  "objects": [
+    {
+      "id": "trajectory",
+      "type": "curve",
+      "name": "Full trajectory",
+      "variable": "s",
+      "domain": [0, "2*v0*sin(theta)/g"],
+      "position": ["v0*cos(theta)*s", "v0*sin(theta)*s - g*s^2/2", 0],
+      "color": "#868e96"
+    },
+    {
+      "id": "travelled",
+      "type": "curve",
+      "name": "Path so far",
+      "variable": "s",
+      "domain": [0, "t"],
+      "position": ["v0*cos(theta)*s", "v0*sin(theta)*s - g*s^2/2", 0]
+    },
+    {
+      "id": "ball",
+      "type": "point",
+      "name": "Ball",
+      "position": ["v0*cos(theta)*t", "v0*sin(theta)*t - g*t^2/2", 0],
+      "color": "#e8590c"
+    },
+    {
+      "id": "velocity",
+      "type": "vector",
+      "name": "Velocity (scaled by 0.25 s)",
+      "origin": "ball",
+      "components": ["0.25*v0*cos(theta)", "0.25*(v0*sin(theta) - g*t)", 0],
+      "visible": "showVelocity"
+    },
+    { "id": "lv", "type": "label", "text": "v", "at": "ball", "visible": "showVelocity" }
+  ]
+}

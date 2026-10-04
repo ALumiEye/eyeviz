@@ -126,11 +126,18 @@ const scene = z.strictObject({
   grid: z.exactOptional(z.boolean()),
 });
 
+const timeline = z.strictObject({
+  duration: z.exactOptional(scalar),
+  loop: z.exactOptional(z.boolean()),
+  autoplay: z.exactOptional(z.boolean()),
+});
+
 export const sceneSpecSchema = z.strictObject({
   version: z.literal("0.1"),
   metadata: z.exactOptional(metadata),
   scene: z.exactOptional(scene),
   camera: z.exactOptional(camera),
+  timeline: z.exactOptional(timeline),
   parameters: z.exactOptional(z.array(parameterSchema).max(SPEC_LIMITS.maxParameters)),
   objects: z.array(sceneObjectSchema).max(SPEC_LIMITS.maxObjects),
 });

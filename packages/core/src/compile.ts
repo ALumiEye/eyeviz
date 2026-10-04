@@ -31,6 +31,7 @@ import {
   type ParameterModel,
   type ScalarModel,
   type SceneModel,
+  type TimelineModel,
   type Vec3Model,
   type VisibilityModel,
 } from "./model";
@@ -78,6 +79,7 @@ class Compiler {
       objects.set(object.id, this.compileObject(object, index));
     });
 
+    const timeline = this.compileTimeline();
     const order = this.evaluationOrder(objects);
     if (this.issues.length > 0) return { ok: false, issues: this.issues };
 
@@ -99,6 +101,8 @@ class Compiler {
         grid: this.spec.scene?.grid ?? true,
       }),
       ...(this.spec.camera ? { camera: this.spec.camera } : {}),
+      ...(timeline ? { timeline } : {}),
+      animated: timeline !== undefined || dependents.has(TIME_SYMBOL),
       parameters,
       objects,
       order,
@@ -142,6 +146,29 @@ class Compiler {
       }
     });
     return parameters;
+  }
+
+  private compileTimeline(): TimelineModel | undefined {
+    const spec = this.spec.timeline;
+    if (!spec) return undefined;
+    const dependencies = new Set<string>();
+    let duration: ScalarModel | undefined;
+    if (spec.duration !== undefined) {
+      duration = this.compileScalar(spec.duration, "timeline.duration", dependencies);
+      if (dependencies.has(TIME_SYMBOL)) {
+        this.issues.push({
+          code: "INVALID_REFERENCE_TYPE",
+          message: "The timeline duration cannot depend on time 't' itself",
+          path: "timeline.duration",
+        });
+      }
+    }
+    return Object.freeze({
+      ...(duration ? { duration } : {}),
+      loop: spec.loop ?? false,
+      autoplay: spec.autoplay ?? false,
+      dependencies,
+    });
   }
 
   private checkReservedNames(): void {

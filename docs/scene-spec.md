@@ -72,6 +72,7 @@ there are no meshes, materials, segment counts or renderer settings in a spec.
 | `metadata`   | [Metadata](#metadata)      | no       |                                          |
 | `scene`      | [Scene](#scene)            | no       | Dimension, axes, grid                    |
 | `camera`     | [Camera](#camera)          | no       | Renderer picks a default view if absent  |
+| `timeline`   | [Timeline](#timeline)      | no       | How scene time `t` is played             |
 | `parameters` | [Parameter](#parameters)[] | no       | At most 100                              |
 | `objects`    | [SceneObject](#objects)[]  | yes      | At most 1000; may be empty               |
 
@@ -102,6 +103,25 @@ Metadata is plain text. HTML is never interpreted.
 
 Camera values are numbers, not expressions, in v0.1. In 2D scenes only `target` is used
 (the center of the view); the renderer frames the drawing automatically.
+
+### Timeline
+
+Motion is written with the time variable `t` in any expression
+([ADR-0016](adr/0016-time-driven-by-expressions.md)). The timeline only tells players how to
+run `t`:
+
+| Field      | Type     | Default | Notes                                                                                             |
+| ---------- | -------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `duration` | `Scalar` | —       | Seconds, > 0. May depend on parameters (e.g. a flight time), not on `t`. Without it, time runs on |
+| `loop`     | boolean  | `false` | Restart from 0 at the end; otherwise stop at the end                                              |
+| `autoplay` | boolean  | `false` | Start when shown. Players never autoplay under reduced-motion preferences                         |
+
+```json
+"timeline": { "duration": "2*v0*sin(theta)/g", "loop": true }
+```
+
+A curve with `"domain": [0, "t"]` draws the path travelled so far; at `t = 0` it is simply
+empty.
 
 ## Parameters
 
@@ -254,8 +274,8 @@ Plain text shown next to a point or position. Text is never interpreted as HTML.
 | `curve.position`                                    |         ✓         |  ✓  |           ✓           |  ✓ `variable`   |
 | `surface.position`                                  |         ✓         |  ✓  |           ✓           |  ✓ `variables`  |
 
-`t` is the scene time in seconds (default `0`). Timeline playback arrives in Phase 3; the
-symbol is reserved and evaluable from v0.1.
+`t` is the scene time in seconds (default `0`), driven by a player (see [Timeline](#timeline)).
+`timeline.duration` may use parameters and constants, but not `t`.
 
 ## Validation errors
 
