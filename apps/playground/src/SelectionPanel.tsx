@@ -1,12 +1,13 @@
 import type { EyeVizEngine, ObjectState } from "@alumieye/eyeviz";
 import { useEyeVizState } from "@alumieye/eyeviz/react";
+import { useT } from "./i18n";
 
 const n = (value: number) => (Number.isFinite(value) ? Number(value.toFixed(3)).toString() : "—");
 const vec = (v: readonly number[]) => `(${v.map(n).join(", ")})`;
 const length = (v: readonly number[]) => Math.hypot(...v);
 
 /** Live, read-only facts about an object's current state. */
-function facts(state: ObjectState): string[] {
+export function facts(state: ObjectState): string[] {
   switch (state.type) {
     case "point":
       return [`position ${vec(state.position)}`];
@@ -36,6 +37,7 @@ interface Props {
 
 /** Inspector for the selected object: what it is, its live values, and what drives it. */
 export function SelectionPanel({ engine, id, onShowInSpec, onClear }: Props) {
+  const t = useT();
   const state = useEyeVizState(engine, (s) => s.objects[id]);
   const model = engine.model.objects.get(id);
   if (!model || !state) return null;
@@ -45,25 +47,25 @@ export function SelectionPanel({ engine, id, onShowInSpec, onClear }: Props) {
   const drag = model.type === "point" ? model.drag : undefined;
 
   return (
-    <div className="selection" role="region" aria-label="Selected object">
+    <div className="selection" role="region" aria-label={t.selected}>
       <div className="selection-body">
         <div>
           <strong>{model.name ?? id}</strong> <span className="muted">({model.type})</span>
-          {!state.valid ? <span className="badge badge-error">undefined here</span> : null}
-          {!state.visible ? <span className="badge">hidden</span> : null}
+          {!state.valid ? <span className="badge badge-error">{t.undefinedHere}</span> : null}
+          {!state.visible ? <span className="badge">{t.hidden}</span> : null}
         </div>
         <div className="selection-facts">{facts(state).join(" · ")}</div>
         {parameters.length || usesTime ? (
           <div className="muted">
-            depends on {[...parameters, ...(usesTime ? ["time t"] : [])].join(", ")}
-            {drag ? ` · drag changes ${drag.join(", ")}` : ""}
+            {t.dependsOn} {[...parameters, ...(usesTime ? [t.time] : [])].join(", ")}
+            {drag ? ` · ${t.dragChanges} ${drag.join(", ")}` : ""}
           </div>
         ) : null}
       </div>
       <button type="button" onClick={() => onShowInSpec(model.index)}>
-        Show in spec
+        {t.showInSpec}
       </button>
-      <button type="button" aria-label="Clear selection" onClick={onClear}>
+      <button type="button" aria-label={t.clearSelection} onClick={onClear}>
         ✕
       </button>
     </div>

@@ -1,4 +1,4 @@
-import { compileScene, type SceneModel } from "@alumieye/eyeviz";
+import { compileScene, validateSpec, type SceneModel, type SceneSpec } from "@alumieye/eyeviz";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { locate } from "./editor/locate";
 import type { EditorIssue } from "./editor/types";
@@ -7,6 +7,8 @@ export interface Analysis {
   readonly issues: readonly EditorIssue[];
   /** Present when the text is a valid scene. */
   readonly model?: SceneModel;
+  /** Present when the text is a structurally valid spec (it may still have formula errors). */
+  readonly spec?: SceneSpec;
 }
 
 /** Text → JSON → validated, compiled scene, with every issue mapped to a text range. */
@@ -24,9 +26,12 @@ export function analyze(text: string): Analysis {
     };
   }
 
+  const structure = validateSpec(value);
+  const spec = structure.ok ? { spec: structure.spec } : {};
   const result = compileScene(value);
-  if (result.ok) return { issues: [], model: result.model };
+  if (result.ok) return { issues: [], model: result.model, ...spec };
   return {
+    ...spec,
     issues: result.issues.map((issue) => ({
       code: issue.code,
       message: issue.message,

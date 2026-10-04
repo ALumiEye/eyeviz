@@ -159,9 +159,13 @@ describe("bounds and camera", () => {
     expect(bounds.radius).toBeCloseTo(Math.hypot(10, 1, 4) / 2);
   });
 
-  it("never returns a degenerate radius", () => {
+  it("frames ±5 for an empty scene, so new objects are on screen", () => {
     const engine = new EyeVizEngine({ version: "0.1", objects: [] });
-    expect(computeBounds(engine.getState()).radius).toBe(1);
+    expect(computeBounds(engine.getState())).toMatchObject({
+      radius: 5,
+      min: [-5, -5, -5],
+      max: [5, 5, 5],
+    });
   });
 
   it("places the default camera above and in front of the scene", () => {

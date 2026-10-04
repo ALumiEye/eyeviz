@@ -1,11 +1,22 @@
-import { EyeVizEngine, getSceneSpecJsonSchema, type SceneModel } from "@alumieye/eyeviz";
+import {
+  compileScene,
+  EyeVizEngine,
+  getSceneSpecJsonSchema,
+  type NumberVec3,
+  type SceneModel,
+  type SceneSpec,
+} from "@alumieye/eyeviz";
+import { emptyScene, SceneDocument } from "@alumieye/eyeviz/authoring";
 import { EyeVizScene } from "@alumieye/eyeviz/react";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { analyze, type Analysis } from "./analyze";
 import { lineColumn, locate, type TextRange } from "./editor/locate";
 import { SpecEditor } from "./editor/SpecEditor";
+import { Inspector, type Selection } from "./editor/visual/Inspector";
+import { SceneTree } from "./editor/visual/SceneTree";
 import { EXAMPLES } from "./examples";
 import { formatJson } from "./format";
+import { setLanguage, useT, type Language } from "./i18n";
 import { ParameterControls } from "./ParameterControls";
 import { SelectionPanel } from "./SelectionPanel";
 import { StepsBar } from "./StepsBar";
@@ -13,11 +24,10 @@ import { TimelineBar } from "./TimelineBar";
 
 const REPOSITORY_URL = "https://github.com/ALumiEye/eyeviz";
 const EDIT_DEBOUNCE_MS = 200;
+const DRAFT_KEY = "eyeviz.playground.draft";
 const jsonSchema = getSceneSpecJsonSchema();
 
-const initialExample = EXAMPLES[0];
-const initialText = initialExample?.text ?? '{\n  "version": "0.1",\n  "objects": []\n}\n';
-const initialAnalysis = analyze(initialText);
+type Mode = "visual" | "json";
 
 /** Creates an engine, keeping the current values of parameters that still exist. */
 function createEngine(model: SceneModel, previous: EyeVizEngine | null): EyeVizEngine {
@@ -32,67 +42,152 @@ function createEngine(model: SceneModel, previous: EyeVizEngine | null): EyeVizE
     engine.setParameters(carried);
     // Keep the moment being looked at while the spec is edited.
     if (engine.model.animated) engine.setTime(previous.getTime());
+    const step = previous.getState().step;
+    if (step !== null && step < engine.getSteps().length) engine.setStep(step);
   }
   return engine;
 }
 
+function engineFor(spec: SceneSpec, previous: EyeVizEngine | null): EyeVizEngine | null {
+  const result = compileScene(spec);
+  return result.ok ? createEngine(result.model, previous) : null;
+}
+
+function readDraft(): { exampleId: string; spec: SceneSpec } | undefined {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return undefined;
+    const draft = JSON.parse(raw) as { exampleId?: string; text?: string };
+    const result = analyze(draft.text ?? "");
+    return result.spec ? { exampleId: draft.exampleId ?? "", spec: result.spec } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function exampleSpec(id: string): SceneSpec | undefined {
+  const example = EXAMPLES.find((e) => e.id === id);
+  return example ? analyze(example.text).spec : undefined;
+}
+
+const draft = readDraft();
+const initialExampleId = draft?.exampleId ?? EXAMPLES[0]?.id ?? "";
+const initialSpec = draft?.spec ?? exampleSpec(initialExampleId) ?? emptyScene();
+
 export function App() {
-  const [exampleId, setExampleId] = useState(initialExample?.id ?? "");
-  const [text, setText] = useState(initialText);
-  const [analysis, setAnalysis] = useState<Analysis>(initialAnalysis);
-  const [engine, setEngine] = useState<EyeVizEngine | null>(() =>
-    initialAnalysis.model ? new EyeVizEngine(initialAnalysis.model) : null,
+  const t = useT();
+  const [mode, setMode] = useState<Mode>("visual");
+  const [exampleId, setExampleId] = useState(initialExampleId);
+  const [doc, setDoc] = useState(() => new SceneDocument(initialSpec));
+  const spec = useSyncExternalStore(
+    (onChange) => doc.subscribe(onChange),
+    () => doc.spec,
   );
+  const [engine, setEngine] = useState<EyeVizEngine | null>(() => engineFor(initialSpec, null));
+  const [jsonText, setJsonText] = useState("");
+  const [jsonAnalysis, setJsonAnalysis] = useState<Analysis | undefined>(undefined);
+  const [selection, setSelection] = useState<Selection | null>(null);
   const [reveal, setReveal] = useState<{ range: TextRange; token: number }>();
-  const [notice, setNotice] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [notice, setNotice] = useState(draft ? t.draftRestored : "");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  /** Parse → validate → render if valid; otherwise keep the last valid scene. */
-  const apply = (next: string, resetParameters: boolean) => {
-    const result = analyze(next);
-    setAnalysis(result);
-    const model = result.model;
-    if (model) setEngine((previous) => createEngine(model, resetParameters ? null : previous));
-  };
+  // The document is the single source of truth: every change (edit, undo, JSON) updates the
+  // engine when the spec is valid; otherwise the last valid scene stays on screen.
+  useEffect(
+    () =>
+      doc.subscribe((change) => {
+        const result = compileScene(change.spec);
+        if (result.ok) setEngine((previous) => createEngine(result.model, previous));
+        try {
+          localStorage.setItem(
+            DRAFT_KEY,
+            JSON.stringify({ exampleId: "", text: formatJson(change.spec) }),
+          );
+        } catch {
+          // Drafts are a convenience; the editor works without storage.
+        }
+      }),
+    [doc],
+  );
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
-  const onEdit = (next: string) => {
-    setText(next);
+  // Visual mode: issues come from compiling the document, located in its formatted JSON.
+  const visualText = useMemo(() => `${formatJson(spec)}\n`, [spec]);
+  const visualIssues = useMemo(() => {
+    const result = compileScene(spec);
+    return result.ok ? [] : result.issues;
+  }, [spec]);
+  const text = mode === "json" ? jsonText : visualText;
+  const issueList =
+    mode === "json" && jsonAnalysis
+      ? jsonAnalysis.issues
+      : visualIssues.map((issue) => ({
+          code: issue.code,
+          message: issue.message,
+          path: issue.path,
+          range: locate(visualText, issue.path),
+        }));
+  const jsonBlocked = mode === "json" && jsonAnalysis !== undefined && !jsonAnalysis.spec;
+
+  const loadSpec = (next: SceneSpec, id: string) => {
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => apply(next, false), EDIT_DEBOUNCE_MS);
+    const nextDoc = new SceneDocument(next);
+    setDoc(nextDoc);
+    setEngine(engineFor(next, null));
+    setExampleId(id);
+    setSelection(null);
+    setJsonText(`${formatJson(next)}\n`);
+    setJsonAnalysis(undefined);
   };
 
   const loadExample = (id: string) => {
-    const example = EXAMPLES.find((e) => e.id === id);
-    if (!example) return;
+    if (id === "new2d" || id === "new3d")
+      return loadSpec(emptyScene(id === "new2d" ? "2d" : "3d"), "");
+    const next = exampleSpec(id);
+    if (next) loadSpec(next, id);
+  };
+
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    if (next === "json") {
+      setJsonText(visualText);
+      setJsonAnalysis(undefined);
+    } else if (jsonBlocked) {
+      setNotice(t.jsonInvalidForVisual);
+      return;
+    }
+    setMode(next);
+  };
+
+  const onJsonEdit = (next: string) => {
+    setJsonText(next);
     clearTimeout(timer.current);
-    setSelected(null);
-    setExampleId(id);
-    setText(example.text);
-    apply(example.text, true);
+    timer.current = setTimeout(() => {
+      const result = analyze(next);
+      setJsonAnalysis(result);
+      if (result.spec) doc.replace(result.spec, "Edit JSON", { coalesceKey: "json" });
+    }, EDIT_DEBOUNCE_MS);
   };
 
   const format = () => {
     try {
       const formatted = `${formatJson(JSON.parse(text))}\n`;
-      setText(formatted);
-      apply(formatted, false);
+      if (mode === "json") onJsonEdit(formatted);
     } catch {
-      flash("Fix JSON syntax errors before formatting");
+      setNotice(t.formatNeedsJson);
     }
-  };
-
-  const flash = (message: string) => {
-    setNotice(message);
-    setTimeout(() => setNotice(""), 2000);
   };
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      flash("Copied to clipboard");
+      setNotice(t.copied);
     } catch {
-      flash("Copy failed — select the text and copy manually");
+      setNotice(t.copyFailed);
     }
   };
 
@@ -105,20 +200,156 @@ export function App() {
     URL.revokeObjectURL(url);
   };
 
-  const issues = analysis.issues;
-  const stale = issues.length > 0 && engine !== null;
+  const undo = () => doc.undo();
+  const redo = () => doc.redo();
+
+  // Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z, Ctrl+Y — unless typing in a field or the JSON editor.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (mode !== "visual" || !(event.ctrlKey || event.metaKey)) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.closest("input, textarea, select") || target.isContentEditable)) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) doc.undo();
+      else if ((key === "z" && event.shiftKey) || key === "y") doc.redo();
+      else return;
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [doc, mode]);
+
+  /** In the visual editor, dragging a point with fixed coordinates edits those coordinates. */
+  const onDragPoint = (id: string, target: readonly [number, number, number]) => {
+    if (engine?.isDraggable(id)) return engine.dragPoint(id, target as NumberVec3);
+    const object = doc.spec.objects.find((o) => o.id === id);
+    if (object?.type !== "point" || !object.position.every((v) => typeof v === "number")) return;
+    const round = (v: number) => Math.round(v * 100) / 100;
+    const next = object.position.map((v, axis) =>
+      doc.spec.scene?.dimension === "2d" && axis === 2 ? v : round(target[axis] as number),
+    );
+    doc.apply(
+      { op: "updateObject", id, changes: { position: next } },
+      { coalesceKey: `drag:${id}` },
+    );
+  };
+
+  const selectedObject = selection?.kind === "object" ? selection.id : null;
+  const stale = issueList.length > 0 && engine !== null;
+
+  const preview = (
+    <section className="pane pane-preview" aria-labelledby="preview-title">
+      <h2 id="preview-title" className="pane-title">
+        {t.liveVisualization}
+        {stale ? <span className="badge badge-warn">{t.showingLastValid}</span> : null}
+      </h2>
+      <div className="preview-host">
+        {engine ? (
+          <EyeVizScene
+            engine={engine}
+            selected={selectedObject}
+            onSelect={(id) => setSelection(id ? { kind: "object", id } : null)}
+            dragMode={mode === "visual" ? "all" : "declared"}
+            onDragPoint={onDragPoint}
+            lazy={false}
+            style={{ height: "100%", aspectRatio: "auto" }}
+          />
+        ) : (
+          <p className="muted empty">{t.fixToSee}</p>
+        )}
+      </div>
+      {mode === "json" && engine && selectedObject && engine.model.objects.has(selectedObject) ? (
+        <SelectionPanel
+          engine={engine}
+          id={selectedObject}
+          onShowInSpec={(index) =>
+            setReveal({ range: locate(text, `objects[${index}]`), token: Math.random() })
+          }
+          onClear={() => setSelection(null)}
+        />
+      ) : null}
+      {engine ? <StepsBar engine={engine} /> : null}
+      {engine?.model.animated ? <TimelineBar engine={engine} /> : null}
+    </section>
+  );
+
+  const issuesPanel = (
+    <section className="pane pane-issues" aria-labelledby="issues-title">
+      <h2 id="issues-title" className="pane-title">
+        {t.validation}
+        <span className={issueList.length ? "badge badge-error" : "badge badge-ok"}>
+          {issueList.length ? t.issues(issueList.length) : t.valid}
+        </span>
+      </h2>
+      {issueList.length === 0 ? (
+        <p className="muted">{t.sceneIsValid}</p>
+      ) : (
+        <ul className="issues">
+          {issueList.map((issue, index) => {
+            const { line, column } = lineColumn(text, issue.range.offset);
+            const objectIndex = /^objects\[(\d+)\]/.exec(issue.path)?.[1];
+            return (
+              <li key={`${issue.path}-${issue.code}-${index}`}>
+                <button
+                  type="button"
+                  className="issue"
+                  onClick={() => {
+                    const object =
+                      objectIndex !== undefined ? spec.objects[Number(objectIndex)] : undefined;
+                    if (mode === "visual" && object)
+                      setSelection({ kind: "object", id: object.id });
+                    else setReveal({ range: issue.range, token: index + Math.random() });
+                  }}
+                >
+                  <span className="issue-code">{issue.code}</span>
+                  <span className="issue-message">{issue.message}</span>
+                  <span className="issue-where">
+                    {issue.path || t.document}
+                    {mode === "json" ? ` · ${t.line} ${line}:${column}` : ""}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+
+  const controls = (
+    <section className="pane pane-controls" aria-labelledby="controls-title">
+      <h2 id="controls-title" className="pane-title">
+        {t.parameters}
+      </h2>
+      {engine ? <ParameterControls engine={engine} /> : null}
+    </section>
+  );
 
   return (
     <div className="layout">
       <header className="header">
         <h1>
-          EyeViz <span className="by">by ALumiEye</span>
+          {t.appTitle} <span className="by">{t.by}</span>
         </h1>
         <div className="toolbar">
+          <div className="segmented" role="group" aria-label={t.modeLabel}>
+            <button
+              type="button"
+              aria-pressed={mode === "visual"}
+              onClick={() => switchMode("visual")}
+            >
+              {t.modeVisual}
+            </button>
+            <button type="button" aria-pressed={mode === "json"} onClick={() => switchMode("json")}>
+              {t.modeJson}
+            </button>
+          </div>
           <label className="example-select">
-            <span className="visually-hidden">Example</span>
+            <span className="visually-hidden">{t.examples}</span>
             <select value={exampleId} onChange={(event) => loadExample(event.target.value)}>
-              {exampleId === "" ? <option value="">Custom scene</option> : null}
+              {exampleId === "" ? <option value="">{t.customScene}</option> : null}
+              <option value="new2d">＋ {t.newScene2d}</option>
+              <option value="new3d">＋ {t.newScene3d}</option>
               {EXAMPLES.map((example) => (
                 <option key={example.id} value={example.id}>
                   {example.title}
@@ -126,111 +357,91 @@ export function App() {
               ))}
             </select>
           </label>
-          <button type="button" onClick={format}>
-            Format
-          </button>
+          {mode === "visual" ? (
+            <>
+              <button type="button" onClick={undo} disabled={!doc.canUndo} title={doc.undoSummary}>
+                ↶ {t.undo}
+              </button>
+              <button type="button" onClick={redo} disabled={!doc.canRedo} title={doc.redoSummary}>
+                ↷ {t.redo}
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={format}>
+              {t.format}
+            </button>
+          )}
           <button type="button" onClick={() => void copy()}>
-            Copy
+            {t.copy}
           </button>
           <button type="button" onClick={download}>
-            Download
+            {t.download}
           </button>
+          <label className="example-select">
+            <span className="visually-hidden">{t.language}</span>
+            <select
+              value={t.language}
+              onChange={(event) => setLanguage(event.target.value as Language)}
+            >
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+            </select>
+          </label>
           <a className="repo-link" href={REPOSITORY_URL} target="_blank" rel="noreferrer">
             GitHub
           </a>
         </div>
       </header>
 
-      <main className="workspace">
-        <section className="pane pane-editor" aria-labelledby="spec-title">
-          <h2 id="spec-title" className="pane-title">
-            Scene Specification <span className="badge">v0.1</span>
-          </h2>
-          <div className="editor-host">
-            <SpecEditor
-              value={text}
-              onChange={onEdit}
-              issues={issues}
-              jsonSchema={jsonSchema}
-              reveal={reveal}
+      {mode === "visual" ? (
+        <main className="workspace-visual">
+          <aside className="pane pane-tree">
+            <SceneTree
+              doc={doc}
+              spec={spec}
+              issues={visualIssues}
+              selection={selection}
+              onSelect={setSelection}
+              onNotice={setNotice}
             />
+            {issueList.length ? issuesPanel : null}
+          </aside>
+          <div className="visual-center">
+            {preview}
+            {controls}
           </div>
-        </section>
-
-        <section className="pane pane-preview" aria-labelledby="preview-title">
-          <h2 id="preview-title" className="pane-title">
-            Live Visualization
-            {stale ? <span className="badge badge-warn">showing last valid scene</span> : null}
-          </h2>
-          <div className="preview-host">
-            {engine ? (
-              <EyeVizScene
-                engine={engine}
-                selected={selected}
-                onSelect={setSelected}
-                lazy={false}
-                style={{ height: "100%", aspectRatio: "auto" }}
-              />
-            ) : (
-              <p className="muted empty">Fix the issues to see the scene.</p>
-            )}
-          </div>
-          {engine && selected && engine.model.objects.has(selected) ? (
-            <SelectionPanel
+          <aside className="pane pane-inspector" aria-label={t.inspector}>
+            <Inspector
+              doc={doc}
+              spec={spec}
+              issues={visualIssues}
               engine={engine}
-              id={selected}
-              onShowInSpec={(index) =>
-                setReveal({ range: locate(text, `objects[${index}]`), token: Math.random() })
-              }
-              onClear={() => setSelected(null)}
+              selection={selection}
+              onSelect={setSelection}
             />
-          ) : null}
-          {engine ? <StepsBar engine={engine} /> : null}
-          {engine?.model.animated ? <TimelineBar engine={engine} /> : null}
-        </section>
-
-        <section className="pane pane-issues" aria-labelledby="issues-title">
-          <h2 id="issues-title" className="pane-title">
-            Validation
-            <span className={issues.length ? "badge badge-error" : "badge badge-ok"}>
-              {issues.length ? `${issues.length} issue${issues.length > 1 ? "s" : ""}` : "valid"}
-            </span>
-          </h2>
-          {issues.length === 0 ? (
-            <p className="muted">The scene is valid.</p>
-          ) : (
-            <ul className="issues">
-              {issues.map((issue, index) => {
-                const { line, column } = lineColumn(text, issue.range.offset);
-                return (
-                  <li key={`${issue.path}-${issue.code}-${index}`}>
-                    <button
-                      type="button"
-                      className="issue"
-                      onClick={() =>
-                        setReveal({ range: issue.range, token: index + Math.random() })
-                      }
-                    >
-                      <span className="issue-code">{issue.code}</span>
-                      <span className="issue-message">{issue.message}</span>
-                      <span className="issue-where">
-                        {issue.path || "document"} · line {line}:{column}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="pane pane-controls" aria-labelledby="controls-title">
-          <h2 id="controls-title" className="pane-title">
-            Parameters
-          </h2>
-          {engine ? <ParameterControls engine={engine} /> : null}
-        </section>
-      </main>
+          </aside>
+        </main>
+      ) : (
+        <main className="workspace">
+          <section className="pane pane-editor" aria-labelledby="spec-title">
+            <h2 id="spec-title" className="pane-title">
+              {t.sceneSpecification} <span className="badge">v0.1</span>
+            </h2>
+            <div className="editor-host">
+              <SpecEditor
+                value={jsonText}
+                onChange={onJsonEdit}
+                issues={issueList}
+                jsonSchema={jsonSchema}
+                reveal={reveal}
+              />
+            </div>
+          </section>
+          {preview}
+          {issuesPanel}
+          {controls}
+        </main>
+      )}
 
       <div className="notice" role="status" aria-live="polite">
         {notice}

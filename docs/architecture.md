@@ -54,7 +54,8 @@ synchronizes directly with JSON strings. See [ADR-0001](adr/0001-spec-model-stat
 ```
 spec ─┐
       ├─► core ─► renderer-three ─► react ─► playground
-math ─┘
+math ─┤                                        ▲
+      └─► authoring (edit commands) ───────────┘
 ```
 
 Never reverse it. `spec` and `math` are independent of each other: the schema does not need

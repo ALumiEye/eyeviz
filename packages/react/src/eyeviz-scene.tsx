@@ -30,6 +30,13 @@ export interface EyeVizSceneProps extends ThreeRendererOptions {
   readonly onSelect?: (id: string | null) => void;
   /** Let users drag points that declare `drag` parameters. Default `true`. */
   readonly draggable?: boolean;
+  /** `"all"` lets every point be dragged (for editors); pair it with `onDragPoint`. */
+  readonly dragMode?: "declared" | "all";
+  /**
+   * Replaces the default drag behaviour (`engine.dragPoint`) — e.g. an editor that moves a
+   * point with fixed coordinates by editing the spec.
+   */
+  readonly onDragPoint?: (id: string, target: readonly [number, number, number]) => void;
   readonly className?: string;
   /** Default size: full width with a 16 / 9 aspect ratio. */
   readonly style?: CSSProperties;
@@ -83,10 +90,12 @@ export function EyeVizScene(props: EyeVizSceneProps) {
   const onSelectRef = useRef(props.onSelect);
   const engineRef = useRef(engine);
   const draggableRef = useRef(props.draggable ?? true);
+  const onDragPointRef = useRef(props.onDragPoint);
   useEffect(() => {
     onSelectRef.current = props.onSelect;
     engineRef.current = engine;
     draggableRef.current = props.draggable ?? true;
+    onDragPointRef.current = props.onDragPoint;
   });
   const [renderer, setRenderer] = useState<ThreeRenderer | null>(null);
 
@@ -112,8 +121,11 @@ export function EyeVizScene(props: EyeVizSceneProps) {
           ...options,
           onSelect: (id) => onSelectRef.current?.(id),
           onDrag: (id, target) => {
+            if (!draggableRef.current) return;
+            const custom = onDragPointRef.current;
+            if (custom) return custom(id, target);
             const current = engineRef.current;
-            if (draggableRef.current && current?.isDraggable(id)) current.dragPoint(id, target);
+            if (current?.isDraggable(id)) current.dragPoint(id, target);
           },
         });
         setRenderer(instance);
@@ -149,6 +161,11 @@ export function EyeVizScene(props: EyeVizSceneProps) {
     renderer.setModel(engine.model, engine.getState());
     return engine.subscribe((state, changed) => renderer.update(state, changed));
   }, [renderer, engine]);
+
+  const dragMode = props.dragMode ?? "declared";
+  useEffect(() => {
+    renderer?.setDragMode(dragMode);
+  }, [renderer, dragMode]);
 
   const selected = props.selected ?? null;
   useEffect(() => {

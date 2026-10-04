@@ -6,10 +6,11 @@ EyeViz is an open-source interactive STEM visualization engine by ALumiEye.
 
 _From equations to interactive visualizations._
 
-> **Project status: Phase 5 — direct manipulation.** Scene Spec v0.1 covers points,
-> segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes, axes,
-> motion over time, step-by-step explanations, selection and draggable points (constrained by
-> their formulas). Nothing is published to npm yet; all APIs are **experimental**.
+> **Project status: Phase 6 — visual authoring.** Scenes can be built without code in the
+> playground's visual editor (Vietnamese/English), or written as JSON. Scene Spec v0.1 covers
+> points, segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes,
+> motion over time, step-by-step explanations, selection and draggable points. Nothing is
+> published to npm yet; all APIs are **experimental**.
 
 ## What EyeViz is
 
@@ -146,15 +147,15 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm check:boundari
 
 ## Roadmap
 
-| Phase | Theme                                                                       | Status  |
-| ----- | --------------------------------------------------------------------------- | ------- |
-| 0     | Architecture foundation                                                     | Done    |
-| 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done    |
-| 2     | Vectors, planes, surfaces, labels, axes, 2D scenes                          | Done    |
-| 3     | Timeline and animation                                                      | Done    |
-| 4     | Steps, highlight, focus, selection                                          | Done    |
-| 5     | Direct manipulation: draggable points, inspector                            | Done    |
-| 6     | Visual editor                                                               | Planned |
+| Phase | Theme                                                                       | Status |
+| ----- | --------------------------------------------------------------------------- | ------ |
+| 0     | Architecture foundation                                                     | Done   |
+| 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done   |
+| 2     | Vectors, planes, surfaces, labels, axes, 2D scenes                          | Done   |
+| 3     | Timeline and animation                                                      | Done   |
+| 4     | Steps, highlight, focus, selection                                          | Done   |
+| 5     | Direct manipulation: draggable points, inspector                            | Done   |
+| 6     | Visual editor (bilingual), authoring commands, undo/redo                    | Done   |
 
 Details in [docs/roadmap.md](docs/roadmap.md).
 

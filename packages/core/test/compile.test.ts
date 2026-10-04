@@ -157,3 +157,19 @@ describe("expression and symbol checks", () => {
     ]);
   });
 });
+
+describe("suggestions", () => {
+  it("does not suggest unrelated short names", () => {
+    const issues = compileIssues(
+      scene([{ id: "P", type: "point", position: ["kk", 0, 0] }], [{ id: "r", value: 1 }]),
+    );
+    expect(issues[0]?.details).toEqual({ symbol: "kk" });
+  });
+
+  it("still suggests one-letter typos of short names", () => {
+    const issues = compileIssues(
+      scene([{ id: "P", type: "point", position: ["v1", 0, 0] }], [{ id: "v0", value: 1 }]),
+    );
+    expect(issues[0]?.details).toMatchObject({ suggestion: "v0" });
+  });
+});

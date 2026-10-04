@@ -11,7 +11,7 @@ block them; they are **not commitments**.
 | 3     | Parameters and animation | **Done**    |
 | 4     | Educational interactions | **Done**    |
 | 5     | Direct manipulation      | **Done**    |
-| 6     | Visual authoring         | Planned     |
+| 6     | Visual authoring         | **Done**    |
 | 7     | Advanced STEM            | Exploratory |
 
 ## Phase 0 — Architecture foundation
@@ -90,7 +90,16 @@ discontinuity detection.
 
 ## Phase 6 — Visual authoring
 
-Scene tree, inspector, add/remove objects, Model ↔ Spec round-tripping.
+- [x] `@alumieye/eyeviz-authoring`: serializable edit commands, consistent rename/remove,
+      `SceneDocument` with coalescing undo/redo, templates ([ADR-0019](adr/0019-authoring-and-visual-editor.md))
+- [x] Playground: Visual mode (object tree, "Add" menu, property forms for every object type,
+      parameters, steps and scene settings; formula fields with inline errors) and JSON mode,
+      synchronized two ways through the document
+- [x] Bilingual UI (Vietnamese default, English)
+- [x] Drag fixed points to edit their coordinates; undo/redo (buttons and keyboard)
+- [x] New 2D/3D scenes, autosaved draft, stable default framing for new scenes
+
+Not yet: object type conversion, multi-select, copy/paste, a formula palette.
 
 ## Phase 7 — Advanced STEM (exploratory)
 

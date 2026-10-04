@@ -9,7 +9,8 @@
  *
  *   spec ─┐
  *         ├─► core ─► renderer-three ─► react ─► playground
- *   math ─┘
+ *   math ─┤
+ *         └─► authoring (edit commands) ────────► playground
  *
  * See docs/architecture.md.
  */
@@ -19,6 +20,7 @@ export const ALLOWED_DEPENDENCIES = {
   spec: ["zod"],
   math: [],
   core: ["@alumieye/eyeviz-spec", "@alumieye/eyeviz-math"],
+  authoring: ["@alumieye/eyeviz-spec", "@alumieye/eyeviz-math"],
   "renderer-three": ["@alumieye/eyeviz-core", "@alumieye/eyeviz-spec", "three"],
   react: [
     "@alumieye/eyeviz-core",
@@ -31,6 +33,7 @@ export const ALLOWED_DEPENDENCIES = {
     "three",
   ],
   eyeviz: [
+    "@alumieye/eyeviz-authoring",
     "@alumieye/eyeviz-core",
     "@alumieye/eyeviz-math",
     "@alumieye/eyeviz-react",
@@ -55,10 +58,20 @@ export const FORBIDDEN_IMPORTS = {
     "@alumieye/eyeviz-renderer-*",
     "@alumieye/eyeviz-react",
   ],
+  authoring: [
+    "three",
+    "react",
+    "react-dom",
+    "mathjs",
+    "zod",
+    "@alumieye/eyeviz-core",
+    "@alumieye/eyeviz-renderer-*",
+    "@alumieye/eyeviz-react",
+  ],
   "renderer-three": ["react", "react-dom", "mathjs", "zod", "@alumieye/eyeviz-react"],
   react: ["three", "mathjs", "zod"],
   eyeviz: ["mathjs", "zod"],
 };
 
 /** Packages whose source must not see DOM types (enforced via tsconfig `lib`). */
-export const DOM_FREE_PACKAGES = ["spec", "math", "core"];
+export const DOM_FREE_PACKAGES = ["spec", "math", "core", "authoring"];

@@ -1,34 +1,36 @@
 import type { EyeVizEngine } from "@alumieye/eyeviz";
 import { useEyeVizState, usePlayback } from "@alumieye/eyeviz/react";
+import { useT } from "./i18n";
 
 const SPEEDS = [0.25, 0.5, 1, 2];
 
 /** Play / pause / reset / seek / speed for scenes that use time. */
 export function TimelineBar({ engine }: { engine: EyeVizEngine }) {
+  const t = useT();
   const { playback, status } = usePlayback(engine);
   const time = useEyeVizState(engine, (state) => state.time) ?? 0;
   const duration = useEyeVizState(engine, (state) => state.duration);
   if (!playback) return null;
 
   return (
-    <div className="timeline" role="group" aria-label="Timeline">
+    <div className="timeline" role="group" aria-label={t.timeLabel}>
       <button
         type="button"
         className="timeline-play"
-        aria-label={status.playing ? "Pause" : "Play"}
+        aria-label={status.playing ? t.pause : t.play}
         aria-pressed={status.playing}
         onClick={() => playback.toggle()}
       >
         {status.playing ? "❚❚" : "▶"}
       </button>
-      <button type="button" aria-label="Reset to t = 0" onClick={() => playback.reset()}>
+      <button type="button" aria-label={t.reset} onClick={() => playback.reset()}>
         ⏮
       </button>
       {duration !== undefined ? (
         <input
           type="range"
           className="timeline-scrubber"
-          aria-label="Time"
+          aria-label={t.timeLabel}
           min={0}
           max={duration}
           step={duration / 500}
@@ -42,7 +44,7 @@ export function TimelineBar({ engine }: { engine: EyeVizEngine }) {
         t = {time.toFixed(2)} s{duration !== undefined ? ` / ${duration.toFixed(2)} s` : ""}
       </output>
       <label className="timeline-speed">
-        <span className="visually-hidden">Speed</span>
+        <span className="visually-hidden">{t.speed}</span>
         <select
           value={status.speed}
           onChange={(event) => playback.setSpeed(Number(event.target.value))}

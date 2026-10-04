@@ -1,13 +1,15 @@
 import type { EyeVizEngine, NumberParameterModel } from "@alumieye/eyeviz";
 import { useEyeVizState } from "@alumieye/eyeviz/react";
+import { useT } from "./i18n";
 
 /** Controls generated from parameter definitions. The engine itself never renders UI. */
 export function ParameterControls({ engine }: { engine: EyeVizEngine }) {
+  const t = useT();
   const values = useEyeVizState(engine, (state) => state.parameters);
   const parameters = engine.getParameters().filter((p) => p.interactive);
 
   if (parameters.length === 0) {
-    return <p className="muted">This scene has no interactive parameters.</p>;
+    return <p className="muted">{t.noParameters}</p>;
   }
 
   return (

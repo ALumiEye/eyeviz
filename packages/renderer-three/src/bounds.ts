@@ -67,6 +67,11 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
   }
 
   if (!Number.isFinite(min[0] as number)) return { center: [0, 0, 0], radius: 1 };
+  // Nothing but the origin (e.g. a new, empty scene): frame a comfortable ±5 so that objects
+  // added next are on screen.
+  if (!only && min.every((v, i) => v === max[i])) {
+    return { min: [-5, -5, -5], max: [5, 5, 5], center: [0, 0, 0], radius: 5 };
+  }
 
   const center: NumberVec3 = [
     ((min[0] as number) + (max[0] as number)) / 2,

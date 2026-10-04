@@ -21,3 +21,4 @@ export {
   isConstantName,
   isFunctionName,
 } from "./functions";
+export { renameSymbol } from "./rename";

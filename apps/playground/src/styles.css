@@ -430,3 +430,405 @@ select:hover {
       "editor";
   }
 }
+
+/* ---------- Visual editor ---------- */
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 0;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.danger {
+  background: var(--error);
+  border-color: var(--error);
+  color: #fff;
+}
+
+button.danger-outline {
+  color: var(--error);
+}
+
+.workspace-visual {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 340px;
+  gap: 1px;
+  background: var(--border);
+}
+
+.visual-center {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 1px;
+  min-height: 0;
+  background: var(--border);
+}
+
+/* Panes reuse JSON-mode classes; here they flow in a simple column, not named grid areas. */
+.visual-center > .pane,
+.workspace-visual > .pane {
+  grid-area: auto;
+}
+
+.visual-center .pane-controls {
+  max-height: 32vh;
+}
+
+.pane-tree,
+.pane-inspector {
+  overflow: auto;
+}
+
+.pane-tree .pane-issues {
+  padding: 12px 0 0;
+}
+
+/* Tree */
+
+.tree h4 {
+  margin: 14px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.tree ul,
+.tree ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-header {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.tree-header > .tree-item {
+  flex: 1;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+}
+
+.tree-item:hover {
+  border-color: var(--border);
+}
+
+.tree-item.selected {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+}
+
+.tree-icon {
+  width: 18px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.tree-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tree-name {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-issue {
+  color: var(--warn);
+  margin-left: auto;
+}
+
+.add-menu {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: grid;
+  min-width: 170px;
+  padding: 4px;
+  background: var(--pane);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+}
+
+.menu button {
+  border: 0;
+  text-align: left;
+}
+
+.menu button:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+/* Inspector */
+
+.inspector-empty {
+  padding: 8px 0;
+}
+
+.inspector-form {
+  display: grid;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.inspector-form h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.inspector-form code {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.live {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-title {
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.field > label,
+.field > legend,
+.field-label {
+  font-weight: 500;
+  padding: 0;
+}
+
+.field input:not([type="checkbox"]):not([type="color"]),
+.field select,
+.field textarea {
+  font: inherit;
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field-invalid input,
+.field-invalid select,
+.scalar-invalid input {
+  border-color: var(--error) !important;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--error);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.vec3,
+.range {
+  display: grid;
+  gap: 4px;
+}
+
+.scalar {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 6px;
+}
+
+.scalar-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  text-align: right;
+}
+
+.range .scalar {
+  grid-template-columns: 40px minmax(0, 1fr) 26px;
+}
+
+.scalar-input {
+  font:
+    13px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace !important;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.scalar-input.formula {
+  color: var(--accent);
+}
+
+.scalar-kind {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox input {
+  accent-color: var(--accent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip:focus-within {
+  outline: 2px solid var(--focus);
+}
+
+.chip-on {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+}
+
+.color-row,
+.button-row,
+.delete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-row input[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+}
+
+.color-row button[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .workspace-visual {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .pane-inspector {
+    grid-column: 1 / -1;
+    max-height: 45vh;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace-visual {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .visual-center {
+    grid-template-rows: 55vh auto;
+    order: -1;
+  }
+
+  .pane-inspector,
+  .pane-tree {
+    max-height: none;
+  }
+}

@@ -75,12 +75,15 @@ export class ThreeRenderer implements SceneRenderer {
   #palette: Palette;
   #model: SceneModel | undefined;
   #bounds: Bounds = { center: [0, 0, 0], radius: 1 };
+  /** The bounds the camera was last framed on (axes and grid cover at least this). */
+  #framed: Bounds = { center: [0, 0, 0], radius: 1 };
   #dimension: Dimension = "3d";
   #halfHeight = 1;
   #cameraKey: string | undefined;
   #state: SceneState | undefined;
   #selected: string | null = null;
   #draggable: ReadonlySet<string> = new Set();
+  #dragMode: "declared" | "all" = "declared";
   #tween: CameraTween | undefined;
   #frame = 0;
   #onScreen = true;
@@ -167,25 +170,33 @@ export class ThreeRenderer implements SceneRenderer {
 
   setModel(model: SceneModel, state: SceneState): void {
     if (this.#disposed) return;
+    const wasEmpty = (this.#model?.objects.size ?? 0) === 0;
     this.#model = model;
     this.#state = state;
-    this.#draggable = new Set(
-      [...model.objects.values()].filter((o) => o.type === "point" && o.drag).map((o) => o.id),
-    );
+    this.#updateDraggable();
     this.#tween = undefined;
     this.#bounds = computeBounds(state);
-    this.#graph.setModel(model, state, { scale: this.#bounds.radius });
-    this.#graph.setEmphasis(state.highlights, this.#selected);
     this.#setDimension(model.scene.dimension);
-    this.#buildGuides();
 
-    // Keep the user's view while editing a spec; reset it only for a new camera definition.
+    // Keep the user's view while editing a spec. Reframe for a new camera definition, or when
+    // the first content of an empty scene does not fit the default ±5 view (content that fits
+    // keeps a stable view while the scene is being built).
     const cameraKey = JSON.stringify([model.camera ?? null, model.scene.dimension]);
-    if (cameraKey !== this.#cameraKey) {
+    const box = this.#bounds;
+    const outgrowsDefault =
+      wasEmpty &&
+      model.objects.size > 0 &&
+      [...(box.min ?? []), ...(box.max ?? [])].some((v) => Math.abs(v) > 5);
+    if (cameraKey !== this.#cameraKey || outgrowsDefault) {
       this.#cameraKey = cameraKey;
       this.#applyCamera();
       if (state.focus.length > 0) this.#focusOn(state, false);
     }
+
+    // Object sizes follow what is on screen: the larger of the content and the framed view.
+    this.#graph.setModel(model, state, { scale: union(this.#bounds, this.#framed).radius });
+    this.#graph.setEmphasis(state.highlights, this.#selected);
+    this.#buildGuides(); // after framing: guides cover the framed view and the content
 
     const label = [model.metadata.title, model.metadata.description].filter(Boolean).join(". ");
     const canvas = this.#renderer.domElement;
@@ -203,6 +214,24 @@ export class ThreeRenderer implements SceneRenderer {
       this.#graph.setEmphasis(state.highlights, this.#selected);
     if (previous?.focus !== state.focus && state.focus.length > 0) this.#focusOn(state, true);
     this.#requestRender();
+  }
+
+  /**
+   * `"declared"` (default): only points with `drag` parameters can be dragged.
+   * `"all"`: every point can be dragged — for editors, which decide what a drag means.
+   */
+  setDragMode(mode: "declared" | "all"): void {
+    this.#dragMode = mode;
+    this.#updateDraggable();
+  }
+
+  #updateDraggable(): void {
+    const points = [...(this.#model?.objects.values() ?? [])].filter((o) => o.type === "point");
+    this.#draggable = new Set(
+      points
+        .filter((o) => this.#dragMode === "all" || (o.type === "point" && o.drag))
+        .map((o) => o.id),
+    );
   }
 
   /** Shows `id` as selected (emphasized, without dimming the rest), or clears the selection. */
@@ -252,6 +281,7 @@ export class ThreeRenderer implements SceneRenderer {
   #applyCamera(): void {
     const model = this.#model;
     const bounds = this.#bounds;
+    this.#framed = bounds;
     const target = model?.camera?.target ?? bounds.center;
 
     if (this.#dimension === "2d") {
@@ -445,7 +475,7 @@ export class ThreeRenderer implements SceneRenderer {
   #buildGuides(): void {
     disposeGuides(this.#guides);
     const scene = this.#model?.scene;
-    buildGuides(this.#guides, this.#bounds, this.#palette, {
+    buildGuides(this.#guides, union(this.#bounds, this.#framed), this.#palette, {
       axes: this.#options.axes ?? scene?.axes ?? true,
       grid: this.#options.grid ?? scene?.grid ?? true,
       dimension: this.#dimension,
@@ -500,4 +530,22 @@ export class ThreeRenderer implements SceneRenderer {
     document.addEventListener(type, fn);
     this.#cleanups.push(() => document.removeEventListener(type, fn));
   }
+}
+
+/** The smallest box containing both bounds. */
+function union(a: Bounds, b: Bounds): Bounds {
+  const corner = (bounds: Bounds, sign: -1 | 1) =>
+    (sign < 0 ? bounds.min : bounds.max) ?? bounds.center.map((c) => c + sign * bounds.radius);
+  const min = [0, 1, 2].map((i) =>
+    Math.min(corner(a, -1)[i] as number, corner(b, -1)[i] as number),
+  );
+  const max = [0, 1, 2].map((i) => Math.max(corner(a, 1)[i] as number, corner(b, 1)[i] as number));
+  const center = min.map((v, i) => (v + (max[i] as number)) / 2);
+  const radius = Math.hypot(...max.map((v, i) => v - (min[i] as number))) / 2;
+  return {
+    min: min as unknown as NumberVec3,
+    max: max as unknown as NumberVec3,
+    center: center as unknown as NumberVec3,
+    radius: Math.max(1, radius),
+  };
 }

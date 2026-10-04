@@ -1,7 +1,11 @@
-/** Returns the candidate closest to `name` (edit distance ≤ 2), to power "Did you mean…?" hints. */
+/**
+ * Returns the candidate closest to `name`, to power "Did you mean…?" hints: edit distance ≤ 2,
+ * or ≤ 1 for names of up to three characters (or a case-insensitive match).
+ */
 export function suggest(name: string, candidates: Iterable<string>): string | undefined {
   let best: string | undefined;
-  let bestDistance = 3;
+  // Short names need a closer match: "kk" is not a typo of "r".
+  let bestDistance = name.length <= 3 ? 2 : 3;
   const lower = name.toLowerCase();
   for (const candidate of candidates) {
     const distance = candidate.toLowerCase() === lower ? 0 : editDistance(name, candidate);
