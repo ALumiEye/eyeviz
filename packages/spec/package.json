@@ -1,0 +1,51 @@
+{
+  "name": "@alumieye/eyeviz-spec",
+  "version": "0.0.0",
+  "description": "EyeViz Scene Specification: types, schema and validation. Renderer-independent.",
+  "keywords": [
+    "eyeviz",
+    "scene-specification",
+    "stem",
+    "visualization",
+    "schema"
+  ],
+  "license": "Apache-2.0",
+  "author": "ALumiEye",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:package": "publint --strict && attw --pack ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "customConditions": [],
+    // tsup's declaration build injects `baseUrl`, deprecated in TypeScript 6. Build-only;
+    // `pnpm typecheck` stays free of deprecations. Revisit when tsup or its successor drops it.
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src"]
+}

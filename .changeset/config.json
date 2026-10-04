@@ -1,0 +1,9 @@
+{
+  "baseBranch": "main",
+  "access": "public",
+  "fixed": [["@alumieye/eyeviz", "@alumieye/eyeviz-*"]],
+  "ignore": ["@alumieye/eyeviz-playground"],
+  "updateInternalDependencies": "patch",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false
+}

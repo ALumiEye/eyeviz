@@ -1,0 +1,100 @@
+{
+  "name": "@alumieye/eyeviz",
+  "version": "0.0.0",
+  "description": "EyeViz — open-source interactive STEM visualization engine by ALumiEye. One package, subpath imports.",
+  "keywords": [
+    "eyeviz",
+    "alumieye",
+    "stem",
+    "math",
+    "physics",
+    "visualization",
+    "three",
+    "react"
+  ],
+  "license": "Apache-2.0",
+  "author": "ALumiEye",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "three": [
+        "./dist/three.d.ts"
+      ],
+      "react": [
+        "./dist/react.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./three": {
+      "source": "./src/three.ts",
+      "types": "./dist/three.d.ts",
+      "default": "./dist/three.js"
+    },
+    "./react": {
+      "source": "./src/react.ts",
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:package": "publint --strict && attw --pack . --ignore-rules cjs-resolves-to-esm"
+  },
+  "dependencies": {
+    "@alumieye/eyeviz-core": "workspace:*",
+    "@alumieye/eyeviz-math": "workspace:*",
+    "@alumieye/eyeviz-react": "workspace:*",
+    "@alumieye/eyeviz-renderer-three": "workspace:*",
+    "@alumieye/eyeviz-spec": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0 || ^19.0.0",
+    "react-dom": "^18.3.0 || ^19.0.0",
+    "three": ">=0.170.0 <1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "@types/react": "^19.3.0",
+    "three": "^0.186.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "name": "@alumieye/eyeviz-renderer-three",
+  "version": "0.0.0",
+  "description": "EyeViz Three.js renderer: renders evaluated EyeViz scene state with Three.js.",
+  "keywords": [
+    "eyeviz",
+    "three",
+    "threejs",
+    "webgl",
+    "renderer"
+  ],
+  "license": "Apache-2.0",
+  "author": "ALumiEye",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:package": "publint --strict && attw --pack . --profile esm-only"
+  },
+  "dependencies": {
+    "@alumieye/eyeviz-core": "workspace:*",
+    "@alumieye/eyeviz-spec": "workspace:*"
+  },
+  "peerDependencies": {
+    "three": ">=0.170.0 <1.0.0"
+  },
+  "devDependencies": {
+    "three": "^0.186.1",
+    "@types/three": "^0.186.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

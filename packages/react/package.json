@@ -1,0 +1,57 @@
+{
+  "name": "@alumieye/eyeviz-react",
+  "version": "0.0.0",
+  "description": "EyeViz React integration: <EyeVizScene /> and useEyeViz().",
+  "keywords": [
+    "eyeviz",
+    "react",
+    "stem",
+    "visualization"
+  ],
+  "license": "Apache-2.0",
+  "author": "ALumiEye",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:package": "publint --strict && attw --pack . --profile esm-only"
+  },
+  "dependencies": {
+    "@alumieye/eyeviz-core": "workspace:*",
+    "@alumieye/eyeviz-renderer-three": "workspace:*",
+    "@alumieye/eyeviz-spec": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0 || ^19.0.0",
+    "react-dom": "^18.3.0 || ^19.0.0",
+    "three": ">=0.170.0 <1.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "three": "^0.186.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

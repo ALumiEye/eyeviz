@@ -1,0 +1,51 @@
+{
+  "name": "@alumieye/eyeviz-math",
+  "version": "0.0.0",
+  "description": "EyeViz safe mathematical expression engine. No eval, no arbitrary code.",
+  "keywords": [
+    "eyeviz",
+    "math",
+    "expression",
+    "parser",
+    "evaluator"
+  ],
+  "license": "Apache-2.0",
+  "author": "ALumiEye",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:package": "publint --strict && attw --pack ."
+  },
+  "dependencies": {
+    "mathjs": "^15.2.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
