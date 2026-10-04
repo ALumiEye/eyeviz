@@ -150,6 +150,25 @@ const en = {
   clearSelection: "Clear selection",
   hidden: "hidden",
   undefinedHere: "undefined here",
+  fitView: "Fit view",
+  factPosition: "position",
+  factLength: "length",
+  factComponents: "components",
+  factNormal: "normal",
+  factThrough: "through",
+  factPieces: (pieces: number, samples: number) => `${pieces} piece(s), ${samples} samples`,
+  factGrid: (rows: number, columns: number) => `${rows} × ${columns} grid`,
+  factAt: "at",
+  // Quick graph
+  quickGraph: "Quick graph",
+  quickGraphPlaceholder: "e.g. x^3 - 3x   ·   2sin x   ·   ax^2 + bx + c",
+  quickGraphFrom: "x from",
+  quickGraphTo: "to",
+  quickGraphDraw: "Draw",
+  quickGraphHint: "Type a function as on paper and press Enter. Unknown letters become sliders.",
+  quickGraphNewSliders: (names: string) => `new sliders: ${names}`,
+  quickGraphAdded: (sliders: string) =>
+    sliders ? `Graph added, with sliders ${sliders}` : "Graph added",
 } as const;
 
 type Dictionary = {
@@ -297,6 +316,24 @@ const vi: Dictionary = {
   clearSelection: "Bỏ chọn",
   hidden: "đang ẩn",
   undefinedHere: "không xác định",
+  fitView: "Vừa khung",
+  factPosition: "vị trí",
+  factLength: "độ dài",
+  factComponents: "thành phần",
+  factNormal: "pháp tuyến",
+  factThrough: "đi qua",
+  factPieces: (pieces, samples) => `${pieces} đoạn, ${samples} điểm mẫu`,
+  factGrid: (rows, columns) => `lưới ${rows} × ${columns}`,
+  factAt: "tại",
+  quickGraph: "Vẽ nhanh",
+  quickGraphPlaceholder: "ví dụ: x^3 - 3x   ·   2sin x   ·   ax^2 + bx + c",
+  quickGraphFrom: "x từ",
+  quickGraphTo: "đến",
+  quickGraphDraw: "Vẽ",
+  quickGraphHint: "Gõ hàm số như viết trên giấy rồi bấm Enter. Chữ cái lạ sẽ thành thanh trượt.",
+  quickGraphNewSliders: (names) => `thanh trượt mới: ${names}`,
+  quickGraphAdded: (sliders) =>
+    sliders ? `Đã vẽ đồ thị, thêm thanh trượt ${sliders}` : "Đã vẽ đồ thị",
 };
 
 const dictionaries: Record<Language, Dictionary> = { en: en as unknown as Dictionary, vi };

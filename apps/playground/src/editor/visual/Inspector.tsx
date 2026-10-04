@@ -132,7 +132,7 @@ function LiveFacts({ engine, id }: { engine: EyeVizEngine | null; id: string }) 
   const parameters = [...model.dependencies].filter((d) => engine?.model.parameters.has(d));
   return (
     <div className="live" aria-live="off">
-      <span className="live-title">{t.live}</span> {facts(state).join(" · ")}
+      <span className="live-title">{t.live}</span> {facts(state, t).join(" · ")}
       {!state.visible ? <span className="badge">{t.hidden}</span> : null}
       {!state.valid ? <span className="badge badge-error">{t.undefinedHere}</span> : null}
       {parameters.length || model.dependencies.has("t") ? (

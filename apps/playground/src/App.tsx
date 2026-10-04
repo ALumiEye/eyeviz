@@ -7,7 +7,7 @@ import {
   type SceneSpec,
 } from "@alumieye/eyeviz";
 import { emptyScene, SceneDocument } from "@alumieye/eyeviz/authoring";
-import { EyeVizScene } from "@alumieye/eyeviz/react";
+import { EyeVizScene, type EyeVizSceneHandle } from "@alumieye/eyeviz/react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { analyze, type Analysis } from "./analyze";
 import { lineColumn, locate, type TextRange } from "./editor/locate";
@@ -18,6 +18,7 @@ import { EXAMPLES } from "./examples";
 import { formatJson } from "./format";
 import { setLanguage, useT, type Language } from "./i18n";
 import { ParameterControls } from "./ParameterControls";
+import { QuickGraphBar } from "./QuickGraphBar";
 import { SelectionPanel } from "./SelectionPanel";
 import { StepsBar } from "./StepsBar";
 import { TimelineBar } from "./TimelineBar";
@@ -90,6 +91,7 @@ export function App() {
   const [reveal, setReveal] = useState<{ range: TextRange; token: number }>();
   const [notice, setNotice] = useState(draft ? t.draftRestored : "");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const sceneRef = useRef<EyeVizSceneHandle>(null);
 
   // The document is the single source of truth: every change (edit, undo, JSON) updates the
   // engine when the spec is valid; otherwise the last valid scene stays on screen.
@@ -242,10 +244,16 @@ export function App() {
       <h2 id="preview-title" className="pane-title">
         {t.liveVisualization}
         {stale ? <span className="badge badge-warn">{t.showingLastValid}</span> : null}
+        {engine ? (
+          <button type="button" className="fit-view" onClick={() => sceneRef.current?.resetView()}>
+            ⤢ {t.fitView}
+          </button>
+        ) : null}
       </h2>
       <div className="preview-host">
         {engine ? (
           <EyeVizScene
+            ref={sceneRef}
             engine={engine}
             selected={selectedObject}
             onSelect={(id) => setSelection(id ? { kind: "object", id } : null)}
@@ -407,6 +415,13 @@ export function App() {
             {issueList.length ? issuesPanel : null}
           </aside>
           <div className="visual-center">
+            <QuickGraphBar
+              doc={doc}
+              onAdded={(id, sliders) => {
+                setSelection({ kind: "object", id });
+                setNotice(t.quickGraphAdded(sliders.join(", ")));
+              }}
+            />
             {preview}
             {controls}
           </div>

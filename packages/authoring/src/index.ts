@@ -30,3 +30,4 @@ export {
   uniqueId,
   type NewItemKind,
 } from "./templates";
+export { parseQuickFormula, type QuickFormulaResult } from "./quick-formula";

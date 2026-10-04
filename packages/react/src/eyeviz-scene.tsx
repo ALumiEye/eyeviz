@@ -1,11 +1,26 @@
 import type { EngineOptions, EyeVizEngine } from "@alumieye/eyeviz-core";
 import type { ThreeRenderer, ThreeRendererOptions } from "@alumieye/eyeviz-renderer-three";
 import type { EyeVizIssue } from "@alumieye/eyeviz-spec";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Ref,
+} from "react";
 import { useEyeViz } from "./use-eyeviz";
 import { usePlayback } from "./use-playback";
 
+/** Imperative actions on a rendered scene, via `ref`. */
+export interface EyeVizSceneHandle {
+  /** Frames all current content (or the spec's camera), e.g. after parameters moved things. */
+  resetView(): void;
+}
+
 export interface EyeVizSceneProps extends ThreeRendererOptions {
+  /** Gives access to `resetView()`. */
+  readonly ref?: Ref<EyeVizSceneHandle>;
   /** A Scene Spec (untrusted input is fine). Ignored when `engine` is given. */
   readonly spec?: unknown;
   /** An existing engine, e.g. from `useEyeViz`, to control parameters from outside. */
@@ -65,7 +80,7 @@ const visuallyHidden: CSSProperties = {
  * Three.js runs exclusively in the browser. If the spec becomes invalid, the last valid scene
  * stays on screen.
  */
-export function EyeVizScene(props: EyeVizSceneProps) {
+export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
   const {
     spec,
     engine: externalEngine,
@@ -166,6 +181,8 @@ export function EyeVizScene(props: EyeVizSceneProps) {
   useEffect(() => {
     renderer?.setDragMode(dragMode);
   }, [renderer, dragMode]);
+
+  useImperativeHandle(ref, () => ({ resetView: () => renderer?.resetCamera() }), [renderer]);
 
   const selected = props.selected ?? null;
   useEffect(() => {

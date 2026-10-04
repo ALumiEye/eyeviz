@@ -98,6 +98,8 @@ discontinuity detection.
 - [x] Bilingual UI (Vietnamese default, English)
 - [x] Drag fixed points to edit their coordinates; undo/redo (buttons and keyboard)
 - [x] New 2D/3D scenes, autosaved draft, stable default framing for new scenes
+- [x] Quick graph: type `y = 3x² − 2sin x` as on paper (`parseQuickFormula` in authoring turns
+      it into the strict form; unknown letters become sliders); "Fit view" button
 
 Not yet: object type conversion, multi-select, copy/paste, a formula palette.
 

@@ -243,10 +243,16 @@ export class ThreeRenderer implements SceneRenderer {
     this.#requestRender();
   }
 
-  /** Resets the camera to the spec's camera (or the automatic default view). */
+  /**
+   * Frames the current content again: the spec's camera if it has one (3D), otherwise a view
+   * that fits every visible object of `state` (default: the last state received).
+   */
   resetCamera(state?: SceneState): void {
-    if (state) this.#bounds = computeBounds(state);
+    const current = state ?? this.#state;
+    if (current) this.#bounds = computeBounds(current);
+    this.#tween = undefined;
     this.#applyCamera();
+    this.#buildGuides();
     this.#requestRender();
   }
 
