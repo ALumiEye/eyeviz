@@ -28,6 +28,7 @@ export type {
   LabelSpec,
   PlaneSpec,
   SceneSettings,
+  StepSpec,
   SurfaceSpec,
   TimelineSpec,
   VectorSpec,

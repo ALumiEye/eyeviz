@@ -31,6 +31,7 @@ import {
   type ParameterModel,
   type ScalarModel,
   type SceneModel,
+  type StepModel,
   type TimelineModel,
   type Vec3Model,
   type VisibilityModel,
@@ -103,6 +104,7 @@ class Compiler {
       ...(this.spec.camera ? { camera: this.spec.camera } : {}),
       ...(timeline ? { timeline } : {}),
       animated: timeline !== undefined || dependents.has(TIME_SYMBOL),
+      ...this.compileSteps(),
       parameters,
       objects,
       order,
@@ -146,6 +148,37 @@ class Compiler {
       }
     });
     return parameters;
+  }
+
+  private compileSteps(): { steps: readonly StepModel[]; stepTargets: ReadonlySet<string> } {
+    const specs = this.spec.steps ?? [];
+    const targets = new Set<string>();
+    for (const step of specs) {
+      for (const id of [
+        ...(step.show ?? []),
+        ...(step.hide ?? []),
+        ...(step.highlight ?? []),
+        ...(step.focus ?? []),
+      ]) {
+        targets.add(id);
+      }
+    }
+    // Objects introduced by any step start hidden; show/hide then accumulate step by step.
+    const hidden = new Set(specs.flatMap((step) => step.show ?? []));
+    const steps = specs.map((step, index): StepModel => {
+      for (const id of step.show ?? []) hidden.delete(id);
+      for (const id of step.hide ?? []) hidden.add(id);
+      return Object.freeze({
+        id: step.id,
+        index,
+        ...(step.title !== undefined ? { title: step.title } : {}),
+        ...(step.description !== undefined ? { description: step.description } : {}),
+        hidden: new Set(hidden),
+        highlight: Object.freeze([...(step.highlight ?? [])]),
+        focus: Object.freeze([...(step.focus ?? [])]),
+      });
+    });
+    return { steps: Object.freeze(steps), stepTargets: targets };
   }
 
   private compileTimeline(): TimelineModel | undefined {

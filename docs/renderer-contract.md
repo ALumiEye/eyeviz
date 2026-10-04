@@ -79,6 +79,14 @@ the renderer's whole lifetime.
 - **Incremental updates:** `update()` touches only the objects in `changed`; geometries and
   materials are reused where possible.
 - **Themes:** `"light" | "dark" | "auto"`. No ALumiEye branding in rendering.
+- **Emphasis:** objects in `state.highlights` are drawn in the highlight colour, larger
+  (points, arrows) or thicker (lines); all others fade. Never colour alone.
+- **Focus:** when `state.focus` changes, the camera moves smoothly (≈0.65 s, keeping the
+  viewing direction) to frame those objects; instantly under reduced motion.
+- **Selection:** a click/tap that is not a drag calls `onSelect(id | null)`. Points and labels
+  are matched within 14 CSS px on screen (small targets), lines within 8 px, meshes and planes
+  by ray casting. `setSelection(id)` emphasizes the selected object without dimming others.
+  `mount()` wires the two together.
 
 ## Disposal checklist
 

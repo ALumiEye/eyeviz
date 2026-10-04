@@ -24,6 +24,10 @@ export interface EyeVizSceneProps extends ThreeRendererOptions {
   readonly autoplay?: boolean;
   /** Called with validation issues whenever `spec` changes. */
   readonly onIssues?: (issues: readonly EyeVizIssue[]) => void;
+  /** The selected object's ID (emphasized in the scene), or `null`. */
+  readonly selected?: string | null;
+  /** Called when the user clicks or taps an object (its ID) or empty space (`null`). */
+  readonly onSelect?: (id: string | null) => void;
   readonly className?: string;
   /** Default size: full width with a 16 / 9 aspect ratio. */
   readonly style?: CSSProperties;
@@ -73,6 +77,11 @@ export function EyeVizScene(props: EyeVizSceneProps) {
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
+  // Latest callback without recreating the renderer (and its WebGL context) when it changes.
+  const onSelectRef = useRef(props.onSelect);
+  useEffect(() => {
+    onSelectRef.current = props.onSelect;
+  });
   const [renderer, setRenderer] = useState<ThreeRenderer | null>(null);
 
   // Mount the renderer once per set of renderer options.
@@ -93,7 +102,10 @@ export function EyeVizScene(props: EyeVizSceneProps) {
           ...(background !== undefined ? { background } : {}),
           ...(maxPixelRatio !== undefined ? { maxPixelRatio } : {}),
         };
-        instance = new ThreeRenderer(container, options);
+        instance = new ThreeRenderer(container, {
+          ...options,
+          onSelect: (id) => onSelectRef.current?.(id),
+        });
         setRenderer(instance);
       });
     };
@@ -127,6 +139,11 @@ export function EyeVizScene(props: EyeVizSceneProps) {
     renderer.setModel(engine.model, engine.getState());
     return engine.subscribe((state, changed) => renderer.update(state, changed));
   }, [renderer, engine]);
+
+  const selected = props.selected ?? null;
+  useEffect(() => {
+    renderer?.setSelection(selected);
+  }, [renderer, selected]);
 
   useEffect(() => {
     if (issues) onIssues?.(issues);

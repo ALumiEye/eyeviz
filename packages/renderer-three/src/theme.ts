@@ -11,6 +11,8 @@ export interface Palette {
   /** Outline behind label text, for contrast against any background. */
   readonly labelHalo: number;
   readonly tickLabel: number;
+  /** Emphasis colour for highlighted and selected objects. */
+  readonly highlight: number;
   readonly grid: number;
   readonly gridCenter: number;
   readonly axes: readonly [x: number, y: number, z: number];
@@ -31,6 +33,7 @@ export const PALETTES: Readonly<Record<ThemeName, Palette>> = Object.freeze({
     label: 0x212529,
     labelHalo: 0xffffff,
     tickLabel: 0x868e96,
+    highlight: 0xf08c00,
     grid: 0xe9ecef,
     gridCenter: 0xced4da,
     axes: [0xe03131, 0x2f9e44, 0x1971c2],
@@ -46,6 +49,7 @@ export const PALETTES: Readonly<Record<ThemeName, Palette>> = Object.freeze({
     label: 0xf1f3f5,
     labelHalo: 0x141517,
     tickLabel: 0x909296,
+    highlight: 0xffd43b,
     grid: 0x25262b,
     gridCenter: 0x373a40,
     axes: [0xff6b6b, 0x69db7c, 0x74c0fc],

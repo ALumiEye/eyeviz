@@ -10,10 +10,13 @@ export interface Bounds {
   readonly radius: number;
 }
 
-/** Bounding sphere of every valid object in the state, plus the origin. */
-export function computeBounds(state: SceneState): Bounds {
-  const min = [0, 0, 0];
-  const max = [0, 0, 0];
+/**
+ * Bounding box and sphere of the valid objects in the state — all of them plus the origin, or
+ * only the objects in `only` (used to focus the camera on a step's objects).
+ */
+export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bounds {
+  const min = only ? [Infinity, Infinity, Infinity] : [0, 0, 0];
+  const max = only ? [-Infinity, -Infinity, -Infinity] : [0, 0, 0];
   const include = (x: number, y: number, z: number) => {
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
     min[0] = Math.min(min[0] as number, x);
@@ -31,7 +34,7 @@ export function computeBounds(state: SceneState): Bounds {
   };
 
   for (const object of Object.values(state.objects)) {
-    if (!object.valid) continue;
+    if (!object.valid || (only && !only.has(object.id))) continue;
     switch (object.type) {
       case "point":
       case "label":
@@ -54,9 +57,16 @@ export function computeBounds(state: SceneState): Bounds {
         includeAll(object.positions);
         break;
       case "segment":
-        break; // its endpoints are points
+        // Its endpoints are points, which are included anyway — unless only some objects count.
+        if (only) {
+          include(...object.from);
+          include(...object.to);
+        }
+        break;
     }
   }
+
+  if (!Number.isFinite(min[0] as number)) return { center: [0, 0, 0], radius: 1 };
 
   const center: NumberVec3 = [
     ((min[0] as number) + (max[0] as number)) / 2,

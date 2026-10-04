@@ -93,6 +93,18 @@ export interface TimelineModel {
   readonly dependencies: ReadonlySet<string>;
 }
 
+/** A step with its cumulative visibility precomputed. See docs/adr/0017-steps.md. */
+export interface StepModel {
+  readonly id: string;
+  readonly index: number;
+  readonly title?: string;
+  readonly description?: string;
+  /** Objects hidden at this step (introduced by a later step, or hidden by `hide`). */
+  readonly hidden: ReadonlySet<string>;
+  readonly highlight: readonly string[];
+  readonly focus: readonly string[];
+}
+
 /** Scene settings with defaults applied. */
 export interface SceneSettingsModel {
   readonly dimension: "2d" | "3d";
@@ -132,6 +144,10 @@ export interface SceneModel {
   readonly scene: SceneSettingsModel;
   readonly camera?: CameraSpec;
   readonly timeline?: TimelineModel;
+  /** Steps in order; empty when the spec has none. */
+  readonly steps: readonly StepModel[];
+  /** Every object mentioned by any step (re-evaluated when the step changes). */
+  readonly stepTargets: ReadonlySet<string>;
   /** True if anything depends on time `t` or a timeline is declared: offer playback. */
   readonly animated: boolean;
   /** In spec order. */

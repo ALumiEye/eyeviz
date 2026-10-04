@@ -40,6 +40,7 @@ export {
   type LabelModel,
   type PlaneModel,
   type SceneSettingsModel,
+  type StepModel,
   type SurfaceModel,
   type TimelineModel,
   type VectorModel,

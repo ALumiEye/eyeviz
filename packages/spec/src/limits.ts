@@ -8,6 +8,7 @@ export const SPEC_LIMITS = {
   maxNameLength: 200,
   maxExpressionLength: 500,
   maxLabelLength: 200,
+  maxSteps: 100,
 } as const;
 
 /** IDs are identifiers so that expressions can reference them. See docs/adr/0010-identifiers.md. */

@@ -69,6 +69,12 @@ export type ObjectState =
 export interface SceneState {
   /** Scene time in seconds. */
   readonly time: number;
+  /** Index of the current step, or `null` for the whole scene (also when there are no steps). */
+  readonly step: number | null;
+  /** Objects to emphasize in the current step (renderers dim the others). */
+  readonly highlights: readonly string[];
+  /** Objects the camera should frame in the current step. */
+  readonly focus: readonly string[];
   /** Timeline duration in seconds for the current parameters, if the scene declares one. */
   readonly duration?: number;
   /**

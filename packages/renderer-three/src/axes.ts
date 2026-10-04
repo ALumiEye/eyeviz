@@ -10,16 +10,19 @@ export interface GuideOptions {
 }
 
 /** Half-length of axes and grid: covers the scene with some margin, in whole tick steps. */
-export function guideExtent(bounds: Bounds): number {
+export function guideExtent(bounds: Bounds, ticksPerHalfAxis = 5): number {
   const reach = Math.max(
     1,
     ...(bounds.min && bounds.max
       ? [...bounds.min, ...bounds.max].map(Math.abs)
       : [bounds.center.map(Math.abs).reduce((a, b) => Math.max(a, b)) + bounds.radius]),
   );
-  const step = niceStep(reach);
+  const step = niceStep(reach, ticksPerHalfAxis);
   return Math.ceil((reach * 1.1) / step) * step;
 }
+
+/** Fewer numbers in 3D, where tick labels of three axes overlap in perspective. */
+const ticksPerHalfAxis = (dimension: "2d" | "3d") => (dimension === "2d" ? 5 : 3);
 
 /**
  * Builds coordinate guides: a grid on z = 0, and axes with ticks, numbers and axis names.
@@ -31,8 +34,8 @@ export function buildGuides(
   palette: Palette,
   options: GuideOptions,
 ): void {
-  const extent = guideExtent(bounds);
-  const step = niceStep(extent);
+  const extent = guideExtent(bounds, ticksPerHalfAxis(options.dimension));
+  const step = niceStep(extent, ticksPerHalfAxis(options.dimension));
 
   if (options.grid) {
     const divisions = Math.min(200, Math.round((2 * extent) / step));

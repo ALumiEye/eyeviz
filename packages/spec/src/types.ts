@@ -156,6 +156,24 @@ export type SceneObjectSpec =
 
 export type SceneObjectType = SceneObjectSpec["type"];
 
+/**
+ * One step of a step-by-step explanation. `show`/`hide` accumulate over the steps; an object
+ * listed in some step's `show` stays hidden until that step. `highlight` and `focus` apply
+ * to this step only. See docs/adr/0017-steps.md.
+ */
+export interface StepSpec {
+  readonly id: string;
+  readonly title?: string;
+  /** Plain text explaining the step. */
+  readonly description?: string;
+  readonly show?: readonly string[];
+  readonly hide?: readonly string[];
+  /** Emphasize these objects (others are dimmed) during this step. */
+  readonly highlight?: readonly string[];
+  /** Frame the camera on these objects during this step. */
+  readonly focus?: readonly string[];
+}
+
 export interface SceneSpec {
   readonly version: "0.1";
   readonly metadata?: SceneMetadata;
@@ -164,4 +182,5 @@ export interface SceneSpec {
   readonly timeline?: TimelineSpec;
   readonly parameters?: readonly ParameterSpec[];
   readonly objects: readonly SceneObjectSpec[];
+  readonly steps?: readonly StepSpec[];
 }

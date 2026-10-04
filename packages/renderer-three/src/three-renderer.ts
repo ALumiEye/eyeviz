@@ -4,6 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { buildGuides, disposeGuides } from "./axes";
 import { computeBounds, defaultCameraPosition, type Bounds } from "./bounds";
+import { prefersReducedMotion } from "./browser";
 import { SceneGraph } from "./scene-graph";
 import { PALETTES, resolveTheme, type Palette, type ThemeOption } from "./theme";
 
@@ -18,7 +19,26 @@ export interface ThreeRendererOptions {
   readonly background?: "theme" | "transparent";
   /** Upper bound for the device pixel ratio, protecting low-end GPUs. Default 2. */
   readonly maxPixelRatio?: number;
+  /**
+   * Called when the user clicks or taps an object (its ID) or empty space (`null`).
+   * The renderer does not change the selection itself; call `setSelection` to show it.
+   */
+  readonly onSelect?: (id: string | null) => void;
 }
+
+interface CameraTween {
+  readonly start: number;
+  readonly duration: number;
+  readonly fromTarget: THREE.Vector3;
+  readonly toTarget: THREE.Vector3;
+  readonly fromPosition: THREE.Vector3;
+  readonly toPosition: THREE.Vector3;
+  readonly fromHalfHeight: number;
+  readonly toHalfHeight: number;
+}
+
+/** Duration of the camera move when a step focuses on objects. */
+const FOCUS_MS = 650;
 
 type Dimension = "2d" | "3d";
 
@@ -51,6 +71,9 @@ export class ThreeRenderer implements SceneRenderer {
   #dimension: Dimension = "3d";
   #halfHeight = 1;
   #cameraKey: string | undefined;
+  #state: SceneState | undefined;
+  #selected: string | null = null;
+  #tween: CameraTween | undefined;
   #frame = 0;
   #onScreen = true;
   #disposed = false;
@@ -123,6 +146,7 @@ export class ThreeRenderer implements SceneRenderer {
       this.#cleanups.push(() => intersection.disconnect());
     }
     this.#onDocument("visibilitychange", () => this.#requestRender());
+    this.#listenForClicks(canvas);
 
     if (darkQuery && this.#options.theme === "auto") {
       const onScheme = () => this.#setPalette(PALETTES[darkQuery.matches ? "dark" : "light"]);
@@ -136,8 +160,11 @@ export class ThreeRenderer implements SceneRenderer {
   setModel(model: SceneModel, state: SceneState): void {
     if (this.#disposed) return;
     this.#model = model;
+    this.#state = state;
+    this.#tween = undefined;
     this.#bounds = computeBounds(state);
     this.#graph.setModel(model, state, { scale: this.#bounds.radius });
+    this.#graph.setEmphasis(state.highlights, this.#selected);
     this.#setDimension(model.scene.dimension);
     this.#buildGuides();
 
@@ -146,6 +173,7 @@ export class ThreeRenderer implements SceneRenderer {
     if (cameraKey !== this.#cameraKey) {
       this.#cameraKey = cameraKey;
       this.#applyCamera();
+      if (state.focus.length > 0) this.#focusOn(state, false);
     }
 
     const label = [model.metadata.title, model.metadata.description].filter(Boolean).join(". ");
@@ -156,8 +184,22 @@ export class ThreeRenderer implements SceneRenderer {
   }
 
   update(state: SceneState, changed: ReadonlySet<string>): void {
-    if (this.#disposed || changed.size === 0) return;
+    if (this.#disposed) return;
+    const previous = this.#state;
+    this.#state = state;
     this.#graph.update(state, changed);
+    if (previous?.highlights !== state.highlights)
+      this.#graph.setEmphasis(state.highlights, this.#selected);
+    if (previous?.focus !== state.focus && state.focus.length > 0) this.#focusOn(state, true);
+    this.#requestRender();
+  }
+
+  /** Shows `id` as selected (emphasized, without dimming the rest), or clears the selection. */
+  setSelection(id: string | null): void {
+    if (this.#disposed || id === this.#selected) return;
+    this.#selected = id;
+    this.#graph.setEmphasis(this.#state?.highlights ?? [], id);
+    this.#selected = this.#graph.selected;
     this.#requestRender();
   }
 
@@ -204,21 +246,7 @@ export class ThreeRenderer implements SceneRenderer {
     if (this.#dimension === "2d") {
       const camera = this.#orthographic;
       // Frame the bounding rectangle of the drawing (with a margin), not a bounding circle.
-      const { width, height } = this.#size();
-      const aspect = width > 0 && height > 0 ? width / height : 1;
-      const min = bounds.min ?? [
-        bounds.center[0] - bounds.radius,
-        bounds.center[1] - bounds.radius,
-        0,
-      ];
-      const max = bounds.max ?? [
-        bounds.center[0] + bounds.radius,
-        bounds.center[1] + bounds.radius,
-        0,
-      ];
-      const halfWidth = Math.max(Math.abs(max[0] - target[0]), Math.abs(target[0] - min[0]), 0.5);
-      const halfHeight = Math.max(Math.abs(max[1] - target[1]), Math.abs(target[1] - min[1]), 0.5);
-      this.#halfHeight = Math.max(halfHeight, halfWidth / aspect) * 1.15;
+      this.#halfHeight = this.#halfHeightFor(bounds, target);
       camera.position.set(target[0], target[1], bounds.radius * 10);
       camera.zoom = 1;
       this.#controls.target.set(target[0], target[1], 0);
@@ -233,6 +261,104 @@ export class ThreeRenderer implements SceneRenderer {
       camera.updateProjectionMatrix();
     }
     this.#controls.update();
+  }
+
+  /** Moves the camera to frame the state's `focus` objects, keeping the viewing direction. */
+  #focusOn(state: SceneState, animate: boolean): void {
+    const bounds = computeBounds(state, new Set(state.focus));
+    const target = new THREE.Vector3(...bounds.center);
+    let position: THREE.Vector3;
+    let halfHeight = this.#halfHeight;
+    if (this.#dimension === "2d") {
+      target.z = 0;
+      position = new THREE.Vector3(target.x, target.y, this.#orthographic.position.z);
+      halfHeight = this.#halfHeightFor(bounds, [target.x, target.y, 0]);
+    } else {
+      const direction = this.#perspective.position.clone().sub(this.#controls.target).normalize();
+      position = target.clone().addScaledVector(direction, bounds.radius * 2.8);
+    }
+    const camera = this.#camera;
+    const instant = !animate || prefersReducedMotion();
+    this.#tween = {
+      start: performance.now(),
+      duration: instant ? 0 : FOCUS_MS,
+      fromTarget: this.#controls.target.clone(),
+      toTarget: target,
+      fromPosition: camera.position.clone(),
+      toPosition: position,
+      fromHalfHeight: this.#halfHeight / (this.#dimension === "2d" ? this.#orthographic.zoom : 1),
+      toHalfHeight: halfHeight,
+    };
+    if (this.#dimension === "2d") this.#orthographic.zoom = 1;
+    if (instant) this.#stepTween(Infinity);
+    this.#requestRender();
+  }
+
+  /** Applies the camera tween at `now`; returns true while it is still running. */
+  #stepTween(now: number): boolean {
+    const tween = this.#tween;
+    if (!tween) return false;
+    const linear = tween.duration === 0 ? 1 : Math.min(1, (now - tween.start) / tween.duration);
+    const k = linear < 0.5 ? 2 * linear * linear : 1 - (-2 * linear + 2) ** 2 / 2; // ease in-out
+    this.#controls.target.lerpVectors(tween.fromTarget, tween.toTarget, k);
+    this.#camera.position.lerpVectors(tween.fromPosition, tween.toPosition, k);
+    if (this.#dimension === "2d") {
+      this.#halfHeight = tween.fromHalfHeight + (tween.toHalfHeight - tween.fromHalfHeight) * k;
+      this.#updateOrthographic();
+    }
+    if (linear >= 1) this.#tween = undefined;
+    return this.#tween !== undefined;
+  }
+
+  /** Half-height of the 2D view that frames `bounds` around `target`, with a margin. */
+  #halfHeightFor(bounds: Bounds, target: readonly number[]): number {
+    const { width, height } = this.#size();
+    const aspect = width > 0 && height > 0 ? width / height : 1;
+    const min = bounds.min ?? [
+      bounds.center[0] - bounds.radius,
+      bounds.center[1] - bounds.radius,
+      0,
+    ];
+    const max = bounds.max ?? [
+      bounds.center[0] + bounds.radius,
+      bounds.center[1] + bounds.radius,
+      0,
+    ];
+    const tx = target[0] as number;
+    const ty = target[1] as number;
+    const halfWidth = Math.max(Math.abs(max[0] - tx), Math.abs(tx - min[0]), 0.5);
+    const halfHeight = Math.max(Math.abs(max[1] - ty), Math.abs(ty - min[1]), 0.5);
+    return Math.max(halfHeight, halfWidth / aspect) * 1.15;
+  }
+
+  /** A click or tap (not a drag) picks the object under the pointer. */
+  #listenForClicks(canvas: HTMLCanvasElement): void {
+    let down: { x: number; y: number; time: number } | undefined;
+    const onDown = (event: PointerEvent) => {
+      down = event.isPrimary
+        ? { x: event.clientX, y: event.clientY, time: performance.now() }
+        : undefined;
+    };
+    const onUp = (event: PointerEvent) => {
+      const start = down;
+      down = undefined;
+      const onSelect = this.#options.onSelect;
+      if (!start || !onSelect || !event.isPrimary) return;
+      const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+      if (moved > 5 || performance.now() - start.time > 600) return; // a drag, not a click
+      const rect = canvas.getBoundingClientRect();
+      const pointer = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      onSelect(this.#graph.pick(pointer, this.#camera, { width: rect.width, height: rect.height }));
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointerup", onUp);
+    this.#cleanups.push(() => {
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointerup", onUp);
+    });
   }
 
   #updateOrthographic(): void {
@@ -291,7 +417,8 @@ export class ThreeRenderer implements SceneRenderer {
     if (!this.#onScreen || (typeof document !== "undefined" && document.hidden)) return;
     this.#frame = requestAnimationFrame(() => {
       this.#frame = 0;
-      const moving = this.#controls.update(); // true while damping is still settling
+      const tweening = this.#stepTween(performance.now());
+      const moving = this.#controls.update() || tweening; // damping still settling, or a focus move
       this.#renderer.render(this.#scene, this.#camera);
       this.#labels.render(this.#scene, this.#camera);
       if (moving) this.#requestRender();

@@ -132,6 +132,18 @@ const timeline = z.strictObject({
   autoplay: z.exactOptional(z.boolean()),
 });
 
+const idList = z.array(id).max(SPEC_LIMITS.maxObjects);
+
+const step = z.strictObject({
+  id,
+  title: z.exactOptional(z.string().max(SPEC_LIMITS.maxTitleLength)),
+  description: z.exactOptional(z.string().max(SPEC_LIMITS.maxDescriptionLength)),
+  show: z.exactOptional(idList),
+  hide: z.exactOptional(idList),
+  highlight: z.exactOptional(idList),
+  focus: z.exactOptional(idList),
+});
+
 export const sceneSpecSchema = z.strictObject({
   version: z.literal("0.1"),
   metadata: z.exactOptional(metadata),
@@ -140,4 +152,5 @@ export const sceneSpecSchema = z.strictObject({
   timeline: z.exactOptional(timeline),
   parameters: z.exactOptional(z.array(parameterSchema).max(SPEC_LIMITS.maxParameters)),
   objects: z.array(sceneObjectSchema).max(SPEC_LIMITS.maxObjects),
+  steps: z.exactOptional(z.array(step).max(SPEC_LIMITS.maxSteps)),
 });

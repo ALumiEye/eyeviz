@@ -31,7 +31,7 @@ export function validateSpec(input: unknown): ValidationResult {
   }
 
   const spec: SceneSpec = parsed.data;
-  const issues = [...checkParameters(spec), ...checkIdsAndReferences(spec)];
+  const issues = [...checkParameters(spec), ...checkIdsAndReferences(spec), ...checkSteps(spec)];
   return issues.length > 0 ? { ok: false, issues } : { ok: true, spec };
 }
 
@@ -237,6 +237,38 @@ function checkIdsAndReferences(spec: SceneSpec): EyeVizIssue[] {
     }
   });
 
+  return issues;
+}
+
+function checkSteps(spec: SceneSpec): EyeVizIssue[] {
+  const issues: EyeVizIssue[] = [];
+  const objectIds = new Set(spec.objects.map((o) => o.id));
+  const parameterIds = new Set(spec.parameters?.map((p) => p.id));
+  const stepIds = new Map<string, number>();
+  spec.steps?.forEach((step, index) => {
+    const at = `steps[${index}]`;
+    const previous = stepIds.get(step.id);
+    if (previous !== undefined) {
+      issues.push({
+        code: "DUPLICATE_ID",
+        message: `Duplicate step ID '${step.id}' (already used at steps[${previous}])`,
+        path: `${at}.id`,
+        details: { id: step.id },
+      });
+    } else {
+      stepIds.set(step.id, index);
+    }
+    for (const field of ["show", "hide", "highlight", "focus"] as const) {
+      step[field]?.forEach((ref, i) => {
+        if (objectIds.has(ref)) return;
+        issues.push(
+          parameterIds.has(ref)
+            ? wrongType(ref, "object", "parameter", `${at}.${field}[${i}]`)
+            : missing(ref, "object", `${at}.${field}[${i}]`),
+        );
+      });
+    }
+  });
   return issues;
 }
 

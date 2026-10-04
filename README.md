@@ -6,11 +6,10 @@ EyeViz is an open-source interactive STEM visualization engine by ALumiEye.
 
 _From equations to interactive visualizations._
 
-> **Project status: Phase 3 — parameters and animation.** Scene Spec v0.1 covers points,
+> **Project status: Phase 4 — educational interactions.** Scene Spec v0.1 covers points,
 > segments, vectors, planes, curves, surfaces and labels, with parameters, 2D/3D scenes, axes,
-> and motion over time (play, pause, seek, loop). Validation, the dependency-free expression
-> engine, the deterministic runtime, the Three.js renderer, React integration and the
-> playground work end to end. Nothing is published to npm yet; all APIs are **experimental**.
+> motion over time and step-by-step explanations with highlighting. Objects can be selected by
+> clicking. Nothing is published to npm yet; all APIs are **experimental**.
 
 ## What EyeViz is
 
@@ -153,7 +152,7 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm check:boundari
 | 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done    |
 | 2     | Vectors, planes, surfaces, labels, axes, 2D scenes                          | Done    |
 | 3     | Timeline and animation                                                      | Done    |
-| 4     | Steps, highlight, focus                                                     | Planned |
+| 4     | Steps, highlight, focus, selection                                          | Done    |
 | 5     | Direct manipulation                                                         | Planned |
 | 6     | Visual editor                                                               | Planned |
 

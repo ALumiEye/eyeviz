@@ -56,7 +56,7 @@ describe("SceneGraph", () => {
   it("creates one view per object", () => {
     const { byName } = setup();
     expect(byName("A")).toBeInstanceOf(THREE.Mesh);
-    expect(byName("AB").type).toBe("Line2");
+    expect(byName("AB").children[0]?.type).toBe("Line2");
     // tan(x) on [-4, 4] has two asymptotes → three pieces
     expect(byName("f").children).toHaveLength(3);
   });
@@ -295,5 +295,72 @@ describe("guides (axes, ticks, grid)", () => {
       dimension: "3d",
     });
     expect(group.children).toHaveLength(0);
+  });
+});
+
+describe("emphasis and picking", () => {
+  const spec = {
+    version: "0.1",
+    objects: [
+      { id: "A", type: "point", position: [0, 0, 0] },
+      { id: "B", type: "point", position: [4, 0, 0] },
+      { id: "AB", type: "segment", from: "A", to: "B" },
+      { id: "lB", type: "label", text: "B", at: "B" },
+    ],
+    steps: [{ id: "s", highlight: ["AB"] }],
+  };
+
+  function setupLesson() {
+    const engine = new EyeVizEngine(spec);
+    const graph = new SceneGraph(PALETTES.light);
+    graph.setModel(engine.model, engine.getState(), { scale: 2 });
+    const byName = (n: string) => graph.root.getObjectByName(n) as THREE.Object3D;
+    const pointMaterial = (n: string) =>
+      (byName(n) as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    const lineMaterial = (n: string) =>
+      (byName(n).children[0] as THREE.Mesh).material as THREE.Material & {
+        linewidth: number;
+        color: THREE.Color;
+      };
+    return { engine, graph, byName, pointMaterial, lineMaterial };
+  }
+
+  it("highlights the step's objects and dims the rest, not by colour alone", () => {
+    const { pointMaterial, lineMaterial } = setupLesson();
+    expect(lineMaterial("AB").color.getHex()).toBe(PALETTES.light.highlight);
+    expect(lineMaterial("AB").linewidth).toBeGreaterThan(3);
+    expect(pointMaterial("A").opacity).toBeLessThan(0.5);
+    expect(pointMaterial("A").transparent).toBe(true);
+  });
+
+  it("restores normal styling when highlights clear", () => {
+    const { graph, pointMaterial, lineMaterial } = setupLesson();
+    graph.setEmphasis([], null);
+    expect(pointMaterial("A").opacity).toBe(1);
+    expect(lineMaterial("AB").color.getHex()).toBe(PALETTES.light.segment);
+    expect(lineMaterial("AB").linewidth).toBe(3);
+  });
+
+  it("emphasizes a selection without dimming the others", () => {
+    const { graph, byName, pointMaterial } = setupLesson();
+    graph.setEmphasis([], "B");
+    expect(graph.selected).toBe("B");
+    expect(byName("B").scale.x).toBeGreaterThan(byName("A").scale.x);
+    expect(pointMaterial("A").opacity).toBe(1);
+    graph.setEmphasis([], "nope");
+    expect(graph.selected).toBeNull();
+  });
+
+  it("picks points by screen distance and ignores empty space", () => {
+    const { graph } = setupLesson();
+    const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, -100, 100);
+    camera.updateMatrixWorld();
+    const size = { width: 500, height: 500 };
+    graph.setResolution(500, 500); // as the renderer does on resize
+    // B is at x = 4 → NDC 0.8; a pointer 10 px away still picks it (label B shares the spot).
+    expect(["B", "lB"]).toContain(graph.pick(new THREE.Vector2(0.8 + 10 / 250, 0), camera, size));
+    expect(graph.pick(new THREE.Vector2(0, 0.8), camera, size)).toBeNull();
+    // On the segment, away from both endpoints: picked by ray casting.
+    expect(graph.pick(new THREE.Vector2(0.4, 0.01), camera, size)).toBe("AB");
   });
 });

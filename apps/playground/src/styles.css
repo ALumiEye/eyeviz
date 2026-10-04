@@ -240,6 +240,32 @@ select:hover {
   padding: 16px;
 }
 
+/* Steps and selection */
+
+.steps,
+.selection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.steps-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.steps button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.selection > span {
+  flex: 1;
+}
+
 /* Timeline */
 
 .timeline {

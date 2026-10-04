@@ -34,6 +34,8 @@ export interface EvaluationContext {
   readonly curveSamples: number;
   /** Samples per side of a surface grid. */
   readonly surfaceSamples: number;
+  /** Objects hidden by the current step. */
+  readonly stepHidden: ReadonlySet<string>;
   /** States evaluated so far in this pass (dependencies come first in evaluation order). */
   readonly objects: Readonly<Record<string, ObjectState>>;
 }
@@ -53,9 +55,10 @@ export function evaluateStandalone(scalar: ScalarModel, scope: ExpressionScope):
 
 export function evaluateObject(model: ObjectModel, context: EvaluationContext): ObjectState {
   const visible =
-    model.visible.kind === "constant"
+    !context.stepHidden.has(model.id) &&
+    (model.visible.kind === "constant"
       ? model.visible.value
-      : context.booleans[model.visible.id] === true;
+      : context.booleans[model.visible.id] === true);
   const base: Base = { id: model.id, visible };
   switch (model.type) {
     case "point":

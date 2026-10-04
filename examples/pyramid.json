@@ -5,7 +5,10 @@
     "description": "Pyramid S.ABCD with a square base of side 4 and apex S at height h above the center. The plane through S, A and B contains one lateral face.",
     "lang": "en"
   },
-  "camera": { "position": [8, -9, 6], "target": [0, 0, 1.5] },
+  "camera": {
+    "position": [8, -9, 6],
+    "target": [0, 0, 1.5]
+  },
   "parameters": [
     {
       "id": "h",
@@ -16,22 +19,88 @@
       "label": "Height h",
       "control": "slider"
     },
-    { "id": "showPlane", "value": true, "label": "Show plane (SAB)", "control": "toggle" }
+    {
+      "id": "showPlane",
+      "value": true,
+      "label": "Show plane (SAB)",
+      "control": "toggle"
+    }
   ],
   "objects": [
-    { "id": "A", "type": "point", "position": [-2, -2, 0] },
-    { "id": "B", "type": "point", "position": [2, -2, 0] },
-    { "id": "C", "type": "point", "position": [2, 2, 0] },
-    { "id": "D", "type": "point", "position": [-2, 2, 0] },
-    { "id": "S", "type": "point", "position": [0, 0, "h"], "color": "#d6336c" },
-    { "id": "AB", "type": "segment", "from": "A", "to": "B" },
-    { "id": "BC", "type": "segment", "from": "B", "to": "C" },
-    { "id": "CD", "type": "segment", "from": "C", "to": "D" },
-    { "id": "DA", "type": "segment", "from": "D", "to": "A" },
-    { "id": "SA", "type": "segment", "from": "S", "to": "A" },
-    { "id": "SB", "type": "segment", "from": "S", "to": "B" },
-    { "id": "SC", "type": "segment", "from": "S", "to": "C" },
-    { "id": "SD", "type": "segment", "from": "S", "to": "D" },
+    {
+      "id": "A",
+      "type": "point",
+      "position": [-2, -2, 0]
+    },
+    {
+      "id": "B",
+      "type": "point",
+      "position": [2, -2, 0]
+    },
+    {
+      "id": "C",
+      "type": "point",
+      "position": [2, 2, 0]
+    },
+    {
+      "id": "D",
+      "type": "point",
+      "position": [-2, 2, 0]
+    },
+    {
+      "id": "S",
+      "type": "point",
+      "position": [0, 0, "h"],
+      "color": "#d6336c"
+    },
+    {
+      "id": "AB",
+      "type": "segment",
+      "from": "A",
+      "to": "B"
+    },
+    {
+      "id": "BC",
+      "type": "segment",
+      "from": "B",
+      "to": "C"
+    },
+    {
+      "id": "CD",
+      "type": "segment",
+      "from": "C",
+      "to": "D"
+    },
+    {
+      "id": "DA",
+      "type": "segment",
+      "from": "D",
+      "to": "A"
+    },
+    {
+      "id": "SA",
+      "type": "segment",
+      "from": "S",
+      "to": "A"
+    },
+    {
+      "id": "SB",
+      "type": "segment",
+      "from": "S",
+      "to": "B"
+    },
+    {
+      "id": "SC",
+      "type": "segment",
+      "from": "S",
+      "to": "C"
+    },
+    {
+      "id": "SD",
+      "type": "segment",
+      "from": "S",
+      "to": "D"
+    },
     {
       "id": "SAB",
       "type": "plane",
@@ -39,10 +108,59 @@
       "through": ["S", "A", "B"],
       "visible": "showPlane"
     },
-    { "id": "lA", "type": "label", "text": "A", "at": "A" },
-    { "id": "lB", "type": "label", "text": "B", "at": "B" },
-    { "id": "lC", "type": "label", "text": "C", "at": "C" },
-    { "id": "lD", "type": "label", "text": "D", "at": "D" },
-    { "id": "lS", "type": "label", "text": "S", "at": "S" }
+    {
+      "id": "lA",
+      "type": "label",
+      "text": "A",
+      "at": "A"
+    },
+    {
+      "id": "lB",
+      "type": "label",
+      "text": "B",
+      "at": "B"
+    },
+    {
+      "id": "lC",
+      "type": "label",
+      "text": "C",
+      "at": "C"
+    },
+    {
+      "id": "lD",
+      "type": "label",
+      "text": "D",
+      "at": "D"
+    },
+    {
+      "id": "lS",
+      "type": "label",
+      "text": "S",
+      "at": "S"
+    }
+  ],
+  "steps": [
+    {
+      "id": "base",
+      "title": "The base ABCD",
+      "description": "Start with the square base of side 4 in the plane z = 0.",
+      "show": ["A", "B", "C", "D", "AB", "BC", "CD", "DA", "lA", "lB", "lC", "lD"],
+      "focus": ["A", "B", "C", "D"]
+    },
+    {
+      "id": "apex",
+      "title": "The apex S",
+      "description": "S sits at height h above the center of the base; join it to every vertex.",
+      "show": ["S", "lS", "SA", "SB", "SC", "SD"],
+      "highlight": ["S", "SA", "SB", "SC", "SD"]
+    },
+    {
+      "id": "face",
+      "title": "The plane (SAB)",
+      "description": "The three points S, A and B determine a plane that contains the lateral face SAB.",
+      "show": ["SAB"],
+      "highlight": ["SAB", "SA", "SB", "AB"],
+      "focus": ["S", "A", "B"]
+    }
   ]
 }

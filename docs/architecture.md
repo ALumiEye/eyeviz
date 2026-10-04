@@ -30,7 +30,7 @@ Scene Spec ──validate──► Scene Model ──evaluate(parameters, t)─�
    (JSON)    spec+core     (compiled)          core                 (values)      three/svg/…
 ```
 
-**Invariant:** `evaluate(model, parameters, t)` is a pure function. Identical spec,
+**Invariant:** `evaluate(model, parameters, t, step)` is a pure function. Identical spec,
 parameters and time produce identical state (within one JavaScript runtime — see §8).
 
 Why three layers rather than mutating the JSON: the Model is the semantic bridge for the
@@ -141,7 +141,8 @@ engine.getParameters(); // definitions, for generating controls
 engine.setParameter("theta", 60); // clamped to [min, max]
 engine.setParameters({ r: 2, theta: 45 }); // one update
 engine.setTime(1.5);
-const state = engine.getState(); // includes state.duration when the scene has a timeline
+engine.setStep(1); // steps: null shows the whole scene
+const state = engine.getState(); // + state.duration, state.step, state.highlights, state.focus
 const unsubscribe = engine.subscribe((state, changed) => {
   /* changed: Set<objectId> */
 });

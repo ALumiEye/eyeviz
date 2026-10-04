@@ -5,7 +5,9 @@
     "description": "Vectors a and b from the origin and their sum a + b, completed into a parallelogram.",
     "lang": "en"
   },
-  "scene": { "dimension": "2d" },
+  "scene": {
+    "dimension": "2d"
+  },
   "parameters": [
     {
       "id": "ax",
@@ -43,7 +45,12 @@
       "label": "b — y component",
       "control": "slider"
     },
-    { "id": "showSum", "value": true, "label": "Show a + b", "control": "toggle" }
+    {
+      "id": "showSum",
+      "value": true,
+      "label": "Show a + b",
+      "control": "toggle"
+    }
   ],
   "objects": [
     {
@@ -104,8 +111,49 @@
       "visible": "showSum",
       "color": "#adb5bd"
     },
-    { "id": "la", "type": "label", "text": "a", "at": ["ax/2", "ay/2", 0], "color": "#e8590c" },
-    { "id": "lb", "type": "label", "text": "b", "at": ["bx/2", "by/2", 0], "color": "#1c7ed6" },
-    { "id": "lsum", "type": "label", "text": "a + b", "at": "S", "visible": "showSum" }
+    {
+      "id": "la",
+      "type": "label",
+      "text": "a",
+      "at": ["ax/2", "ay/2", 0],
+      "color": "#e8590c"
+    },
+    {
+      "id": "lb",
+      "type": "label",
+      "text": "b",
+      "at": ["bx/2", "by/2", 0],
+      "color": "#1c7ed6"
+    },
+    {
+      "id": "lsum",
+      "type": "label",
+      "text": "a + b",
+      "at": "S",
+      "visible": "showSum"
+    }
+  ],
+  "steps": [
+    {
+      "id": "a",
+      "title": "Vector a",
+      "description": "Draw a from the origin.",
+      "show": ["a", "la"],
+      "highlight": ["a"]
+    },
+    {
+      "id": "b",
+      "title": "Vector b",
+      "description": "Draw b from the same origin.",
+      "show": ["b", "lb"],
+      "highlight": ["b"]
+    },
+    {
+      "id": "sum",
+      "title": "The sum a + b",
+      "description": "Complete the parallelogram: its diagonal from the origin is a + b.",
+      "show": ["sum", "A", "B", "S", "AS", "BS", "lsum"],
+      "highlight": ["sum", "lsum"]
+    }
   ]
 }

@@ -2,11 +2,12 @@ import { EyeVizEngine, getSceneSpecJsonSchema, type SceneModel } from "@alumieye
 import { EyeVizScene } from "@alumieye/eyeviz/react";
 import { useRef, useState } from "react";
 import { analyze, type Analysis } from "./analyze";
-import { lineColumn, type TextRange } from "./editor/locate";
+import { lineColumn, locate, type TextRange } from "./editor/locate";
 import { SpecEditor } from "./editor/SpecEditor";
 import { EXAMPLES } from "./examples";
 import { formatJson } from "./format";
 import { ParameterControls } from "./ParameterControls";
+import { StepsBar } from "./StepsBar";
 import { TimelineBar } from "./TimelineBar";
 
 const REPOSITORY_URL = "https://github.com/ALumiEye/eyeviz";
@@ -43,6 +44,7 @@ export function App() {
   );
   const [reveal, setReveal] = useState<{ range: TextRange; token: number }>();
   const [notice, setNotice] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   /** Parse → validate → render if valid; otherwise keep the last valid scene. */
@@ -63,6 +65,7 @@ export function App() {
     const example = EXAMPLES.find((e) => e.id === id);
     if (!example) return;
     clearTimeout(timer.current);
+    setSelected(null);
     setExampleId(id);
     setText(example.text);
     apply(example.text, true);
@@ -162,6 +165,8 @@ export function App() {
             {engine ? (
               <EyeVizScene
                 engine={engine}
+                selected={selected}
+                onSelect={setSelected}
                 lazy={false}
                 style={{ height: "100%", aspectRatio: "auto" }}
               />
@@ -169,6 +174,28 @@ export function App() {
               <p className="muted empty">Fix the issues to see the scene.</p>
             )}
           </div>
+          {engine && selected && engine.model.objects.has(selected) ? (
+            <div className="selection" role="status">
+              <span>
+                Selected: <strong>{engine.model.objects.get(selected)?.name ?? selected}</strong>{" "}
+                <span className="muted">({engine.model.objects.get(selected)?.type})</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const index = engine.model.objects.get(selected)?.index;
+                  if (index !== undefined)
+                    setReveal({ range: locate(text, `objects[${index}]`), token: Math.random() });
+                }}
+              >
+                Show in spec
+              </button>
+              <button type="button" aria-label="Clear selection" onClick={() => setSelected(null)}>
+                ✕
+              </button>
+            </div>
+          ) : null}
+          {engine ? <StepsBar engine={engine} /> : null}
           {engine?.model.animated ? <TimelineBar engine={engine} /> : null}
         </section>
 

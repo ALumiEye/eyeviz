@@ -9,7 +9,7 @@ block them; they are **not commitments**.
 | 1     | Core vertical slice      | **Done**    |
 | 2     | Mathematical primitives  | **Done**    |
 | 3     | Parameters and animation | **Done**    |
-| 4     | Educational interactions | Planned     |
+| 4     | Educational interactions | **Done**    |
 | 5     | Direct manipulation      | Planned     |
 | 6     | Visual authoring         | Planned     |
 | 7     | Advanced STEM            | Exploratory |
@@ -72,7 +72,12 @@ discontinuity detection.
 
 ## Phase 4 — Educational interactions
 
-Steps with show/hide/highlight/focus; object selection.
+- [x] `steps` with cumulative `show`/`hide`, per-step `highlight` and `focus` ([ADR-0017](adr/0017-steps.md))
+- [x] `engine.setStep(i | null)`; step-derived state (`step`, `highlights`, `focus`)
+- [x] Renderer emphasis (highlight + dim, not colour alone) and smooth camera focus
+- [x] Object selection by click/tap: `onSelect` / `setSelection`, React `selected` / `onSelect`
+- [x] Playground: steps bar (previous/next/whole scene), selection panel with "Show in spec"
+- [x] Steps in the pyramid and vector-addition examples
 
 ## Phase 5 — Direct manipulation
 

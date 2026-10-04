@@ -75,6 +75,7 @@ there are no meshes, materials, segment counts or renderer settings in a spec.
 | `timeline`   | [Timeline](#timeline)      | no       | How scene time `t` is played             |
 | `parameters` | [Parameter](#parameters)[] | no       | At most 100                              |
 | `objects`    | [SceneObject](#objects)[]  | yes      | At most 1000; may be empty               |
+| `steps`      | [Step](#steps)[]           | no       | Step-by-step explanation; at most 100    |
 
 ### Metadata
 
@@ -292,14 +293,33 @@ Invalid specs produce structured issues with a JSON path, for example:
 
 See [architecture.md §7](architecture.md#7-error-model) for all codes.
 
+## Steps
+
+A step-by-step explanation of the scene ([ADR-0017](adr/0017-steps.md)).
+
+| Field         | Type       | Notes                                                      |
+| ------------- | ---------- | ---------------------------------------------------------- |
+| `id`          | identifier | Unique among steps                                         |
+| `title`       | string     | Short heading shown by players                             |
+| `description` | string     | Plain-text explanation                                     |
+| `show`        | object IDs | **Cumulative.** Appear from this step on; hidden before it |
+| `hide`        | object IDs | **Cumulative.** Disappear from this step on                |
+| `highlight`   | object IDs | This step only. Emphasized; other objects are dimmed       |
+| `focus`       | object IDs | This step only. The camera frames these objects            |
+
+Objects that no step `show`s are always visible. A scene with steps starts at its first step;
+players can also show the whole scene.
+
+```json
+"steps": [
+  { "id": "base", "title": "The base ABCD", "show": ["A", "B", "C", "D", "AB", "BC", "CD", "DA"] },
+  { "id": "apex", "title": "The apex S", "show": ["S", "SA", "SB", "SC", "SD"], "highlight": ["S"] },
+  { "id": "face", "title": "The plane (SAB)", "show": ["SAB"], "highlight": ["SAB"], "focus": ["S", "A", "B"] }
+]
+```
+
 ## Not in v0.1
 
-These are planned and will be added **additively** (non-normative sketches only):
-
-| Field / type | Phase | Sketch                                                                   |
-| ------------ | ----- | ------------------------------------------------------------------------ |
-| `timeline`   | 3     | duration, loop                                                           |
-| `behaviors`  | 3     | to be decided: may be unnecessary because expressions already accept `t` |
-| `steps`      | 4     | `show` / `hide` / `highlight` / `focus` by object ID                     |
-
-Field names in this table are not final.
+Everything listed in the original roadmap for the specification up to Phase 4 is now part of
+v0.1. Later phases (direct manipulation, constraints, visual authoring) mostly affect tools
+and runtimes rather than the specification; any spec additions will be additive.

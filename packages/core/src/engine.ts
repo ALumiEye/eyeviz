@@ -45,6 +45,7 @@ export class EyeVizEngine {
   readonly #listeners = new Set<StateListener>();
   #values: Record<string, number | boolean>;
   #durationResult: DurationResult = NO_DURATION;
+  #step: number | null;
   #state: SceneState;
 
   /**
@@ -95,6 +96,8 @@ export class EyeVizEngine {
     this.#values = Object.freeze(
       Object.fromEntries(this.#parameterList.map((p) => [p.id, p.defaultValue])),
     );
+    // A lesson starts at its first step; setStep(null) shows the whole scene.
+    this.#step = this.model.steps.length > 0 ? 0 : null;
     this.#state = this.#evaluate(0, this.#values).state;
   }
 
@@ -157,6 +160,41 @@ export class EyeVizEngine {
     this.#commit(this.#evaluate(time, this.#values, this.#state, new Set([TIME_SYMBOL])));
   }
 
+  /** Steps in order (empty when the scene has none). */
+  getSteps(): SceneModel["steps"] {
+    return this.model.steps;
+  }
+
+  /**
+   * Moves to step `index` (0-based), or `null` to show the whole scene.
+   * @throws EyeVizError for an index outside the steps.
+   */
+  setStep(index: number | null): void {
+    if (
+      index !== null &&
+      (!Number.isInteger(index) || index < 0 || index >= this.model.steps.length)
+    ) {
+      throw new EyeVizError([
+        {
+          code: "INVALID_PARAMETER",
+          message: `Step ${index} does not exist; this scene has ${this.model.steps.length} step(s)`,
+          path: "steps",
+        },
+      ]);
+    }
+    if (index === this.#step) return;
+    this.#step = index;
+    this.#commit(
+      this.#evaluate(
+        this.#state.time,
+        this.#values,
+        this.#state,
+        new Set(),
+        this.model.stepTargets,
+      ),
+    );
+  }
+
   /** Called synchronously after every state change with the IDs of changed objects. */
   subscribe(listener: StateListener): () => void {
     this.#listeners.add(listener);
@@ -194,6 +232,7 @@ export class EyeVizEngine {
     values: Readonly<Record<string, number | boolean>>,
     previous?: SceneState,
     changedSymbols?: ReadonlySet<string>,
+    alsoAffected?: ReadonlySet<string>,
   ): { state: SceneState; changed: ReadonlySet<string> } {
     const scope: Record<string, number> = Object.create(null);
     const booleans: Record<string, boolean> = Object.create(null);
@@ -208,12 +247,15 @@ export class EyeVizEngine {
     scope[TIME_SYMBOL] = time;
 
     const affected = previous && changedSymbols ? this.#affected(changedSymbols) : undefined;
+    for (const id of alsoAffected ?? []) affected?.add(id);
+    const step = this.#step === null ? undefined : this.model.steps[this.#step];
     const objects: Record<string, ObjectState> = previous ? { ...previous.objects } : {};
     const context: EvaluationContext = {
       scope,
       booleans,
       curveSamples: this.#curveSamples,
       surfaceSamples: this.#surfaceSamples,
+      stepHidden: step?.hidden ?? NO_IDS,
       objects,
     };
     for (const id of this.model.order) {
@@ -233,6 +275,13 @@ export class EyeVizEngine {
       parameters: previous && previous.parameters === values ? previous.parameters : values,
       objects: Object.freeze(objects),
       issues: duration.issue ? Object.freeze([...issues, duration.issue]) : issues,
+      step: this.#step,
+      // Keep identities stable while the step does not change, so UIs can compare cheaply.
+      highlights:
+        previous && previous.step === this.#step
+          ? previous.highlights
+          : (step?.highlight ?? NO_LIST),
+      focus: previous && previous.step === this.#step ? previous.focus : (step?.focus ?? NO_LIST),
       ...(duration.value !== undefined ? { duration: duration.value } : {}),
     });
     return { state, changed: affected ?? new Set(this.model.order) };
@@ -276,6 +325,8 @@ interface DurationResult {
 }
 
 const NO_DURATION: DurationResult = Object.freeze({});
+const NO_IDS: ReadonlySet<string> = new Set();
+const NO_LIST: readonly string[] = Object.freeze([]);
 
 function collectIssues(
   objects: Readonly<Record<string, ObjectState>>,

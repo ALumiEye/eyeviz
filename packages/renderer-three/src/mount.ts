@@ -37,7 +37,15 @@ export function mount(
 ): EyeVizMount {
   const { engine: engineOptions, autoplay, ...rendererOptions } = options;
   const engine = new EyeVizEngine(spec, engineOptions);
-  const renderer = new ThreeRenderer(container, rendererOptions);
+  // Clicking an object selects it (and clicking empty space clears the selection).
+  const onSelect = rendererOptions.onSelect;
+  const renderer: ThreeRenderer = new ThreeRenderer(container, {
+    ...rendererOptions,
+    onSelect: (id) => {
+      renderer.setSelection(id);
+      onSelect?.(id);
+    },
+  });
   renderer.setModel(engine.model, engine.getState());
   const unsubscribe = engine.subscribe((state, changed) => renderer.update(state, changed));
   const playback = new Playback(engine);
