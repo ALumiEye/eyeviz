@@ -1,0 +1,66 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Sine wave",
+    "description": "The graph of y = a·sin(k·x + φ) for x from −2π to 2π, with a point P on the curve at x = x0.",
+    "lang": "en"
+  },
+  "camera": { "position": [0, -14, 5], "target": [0, 0, 0] },
+  "parameters": [
+    {
+      "id": "a",
+      "value": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.1,
+      "label": "Amplitude a",
+      "control": "slider"
+    },
+    {
+      "id": "k",
+      "value": 1,
+      "min": 0.1,
+      "max": 4,
+      "step": 0.1,
+      "label": "Frequency k",
+      "control": "slider"
+    },
+    {
+      "id": "phi",
+      "value": 0,
+      "unit": "deg",
+      "min": -180,
+      "max": 180,
+      "step": 1,
+      "label": "Phase φ",
+      "control": "slider"
+    },
+    {
+      "id": "x0",
+      "value": 1,
+      "min": -6.28,
+      "max": 6.28,
+      "step": 0.01,
+      "label": "Point position x0",
+      "control": "slider"
+    }
+  ],
+  "objects": [
+    {
+      "id": "wave",
+      "type": "curve",
+      "name": "y = a·sin(k·x + φ)",
+      "variable": "x",
+      "domain": ["-2*pi", "2*pi"],
+      "position": ["x", "a*sin(k*x + phi)", "0"]
+    },
+    {
+      "id": "P",
+      "type": "point",
+      "name": "Point P on the wave",
+      "position": ["x0", "a*sin(k*x0 + phi)", 0]
+    },
+    { "id": "P0", "type": "point", "name": "Foot of P on the x-axis", "position": ["x0", 0, 0] },
+    { "id": "PP0", "type": "segment", "from": "P0", "to": "P" }
+  ]
+}

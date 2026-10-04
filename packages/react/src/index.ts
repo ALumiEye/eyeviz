@@ -2,8 +2,8 @@
  * @alumieye/eyeviz-react
  *
  * Thin React integration over the framework-agnostic EyeViz renderer:
- * `<EyeVizScene spec={scene} />` and `useEyeViz(scene)`.
- *
- * Status: Phase 0 skeleton. Components and hooks are implemented in Phase 1.
+ * `<EyeVizScene spec={scene} />`, `useEyeViz(scene)` and `useEyeVizState(engine, selector)`.
+ * Three.js is loaded lazily in the browser; importing this package on a server is safe.
  */
-export {};
+export { EyeVizScene, type EyeVizSceneProps } from "./eyeviz-scene";
+export { useEyeViz, useEyeVizState, type UseEyeVizResult } from "./use-eyeviz";

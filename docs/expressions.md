@@ -1,6 +1,6 @@
 # Expressions
 
-> Status: specified in Phase 0, implemented in Phase 1 in `@alumieye/eyeviz-math`.
+> Status: implemented in `@alumieye/eyeviz-math`.
 
 Expressions are the most security-sensitive part of EyeViz. Scene Specs are untrusted input,
 so an expression is **data describing a mathematical formula**, never code.
@@ -105,7 +105,7 @@ Expressions are pure: their result depends only on the scope values. The evaluat
 `Math.*` functions, so results are identical within one JavaScript engine; tiny last-bit
 differences between engines are possible and not considered a bug.
 
-## Planned public API
+## Public API (experimental)
 
 ```ts
 interface CompiledExpression {
@@ -114,7 +114,7 @@ interface CompiledExpression {
   evaluate(scope: ExpressionScope): number;
 }
 
-function compileExpression(source: string): ExpressionResult; // { ok, expression } | { ok: false, issues }
+function compileExpression(source: string): ExpressionResult; // { ok, expression } | { ok: false, issue }
 ```
 
 Symbol validation is performed by `core`, which knows which names are in scope for each field.

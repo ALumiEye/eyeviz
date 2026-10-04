@@ -4,7 +4,7 @@ Example Scene Specifications live here as plain `.json` files. They serve as doc
 playground presets, demos and tests: every example must validate and compile, which a core
 test checks.
 
-Planned for Phase 1:
+Current examples:
 
 | File                   | Validates                                                       |
 | ---------------------- | --------------------------------------------------------------- |

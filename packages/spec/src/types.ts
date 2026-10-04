@@ -1,0 +1,102 @@
+/**
+ * Public TypeScript types of the EyeViz Scene Specification v0.1.
+ *
+ * These are hand-written on purpose: the public API must not expose Zod types
+ * (see docs/adr/0009-packaging-and-distribution.md). A type-level test keeps them in sync
+ * with the internal schema.
+ */
+
+/** A number, or an expression string such as `"3*cos(theta)"`. */
+export type Scalar = number | string;
+
+/** A 3D vector of scalars: `[x, y, z]` in right-handed, z-up coordinates. */
+export type Vec3 = readonly [Scalar, Scalar, Scalar];
+
+/** A 3D vector of plain numbers. */
+export type NumberVec3 = readonly [number, number, number];
+
+export interface SceneMetadata {
+  readonly title?: string;
+  /** Plain text. Used as the textual fallback / accessible description of the scene. */
+  readonly description?: string;
+  /** BCP 47 language tag of the human-readable text, e.g. `"vi"` or `"en"`. */
+  readonly lang?: string;
+}
+
+export interface CameraSpec {
+  readonly position?: NumberVec3;
+  readonly target?: NumberVec3;
+}
+
+export type AngleUnit = "rad" | "deg";
+
+export interface NumberParameterSpec {
+  readonly id: string;
+  readonly value: number;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  /** Angle unit. A `"deg"` parameter is converted to radians inside expressions. */
+  readonly unit?: AngleUnit;
+  readonly label?: string;
+  /** `false` marks a named constant that UIs should not offer as a control. Default `true`. */
+  readonly interactive?: boolean;
+  /** UI hint only. The engine never renders controls. */
+  readonly control?: "slider" | "input";
+}
+
+export interface BooleanParameterSpec {
+  readonly id: string;
+  readonly value: boolean;
+  readonly label?: string;
+  readonly interactive?: boolean;
+  /** UI hint only. The engine never renders controls. */
+  readonly control?: "toggle";
+}
+
+export type ParameterSpec = NumberParameterSpec | BooleanParameterSpec;
+
+interface ObjectSpecBase {
+  readonly id: string;
+  /** Human-readable name, e.g. for a scene tree or assistive technology. */
+  readonly name?: string;
+  /** A boolean, or the ID of a boolean parameter. Default `true`. */
+  readonly visible?: boolean | string;
+  /** `#rrggbb`. A presentation hint; renderers pick theme-aware defaults when absent. */
+  readonly color?: string;
+}
+
+export interface PointSpec extends ObjectSpecBase {
+  readonly type: "point";
+  readonly position: Vec3;
+}
+
+export interface SegmentSpec extends ObjectSpecBase {
+  readonly type: "segment";
+  /** ID of a point. */
+  readonly from: string;
+  /** ID of a point. */
+  readonly to: string;
+}
+
+export interface CurveSpec extends ObjectSpecBase {
+  readonly type: "curve";
+  /** Name of the curve's own variable, local to `position`. */
+  readonly variable: string;
+  /** `[start, end]` of the variable. */
+  readonly domain: readonly [Scalar, Scalar];
+  /** Position as a function of `variable`. */
+  readonly position: Vec3;
+}
+
+export type SceneObjectSpec = PointSpec | SegmentSpec | CurveSpec;
+
+export type SceneObjectType = SceneObjectSpec["type"];
+
+export interface SceneSpec {
+  readonly version: "0.1";
+  readonly metadata?: SceneMetadata;
+  readonly camera?: CameraSpec;
+  readonly parameters?: readonly ParameterSpec[];
+  readonly objects: readonly SceneObjectSpec[];
+}

@@ -1,0 +1,55 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Helix",
+    "description": "A circular helix of radius R climbing c units per turn, drawn for a given number of turns.",
+    "lang": "en"
+  },
+  "camera": { "position": [9, -9, 7], "target": [0, 0, 2] },
+  "parameters": [
+    {
+      "id": "R",
+      "value": 2,
+      "min": 0.5,
+      "max": 4,
+      "step": 0.1,
+      "label": "Radius R",
+      "control": "slider"
+    },
+    {
+      "id": "c",
+      "value": 1,
+      "min": 0.2,
+      "max": 3,
+      "step": 0.1,
+      "label": "Rise per turn c",
+      "control": "slider"
+    },
+    {
+      "id": "turns",
+      "value": 4,
+      "min": 1,
+      "max": 10,
+      "step": 0.5,
+      "label": "Turns",
+      "control": "slider"
+    }
+  ],
+  "objects": [
+    {
+      "id": "helix",
+      "type": "curve",
+      "name": "Helix",
+      "variable": "s",
+      "domain": [0, "2*pi*turns"],
+      "position": ["R*cos(s)", "R*sin(s)", "c*s/(2*pi)"]
+    },
+    { "id": "start", "type": "point", "name": "Start", "position": ["R", 0, 0] },
+    {
+      "id": "end",
+      "type": "point",
+      "name": "End",
+      "position": ["R*cos(2*pi*turns)", "R*sin(2*pi*turns)", "c*turns"]
+    }
+  ]
+}

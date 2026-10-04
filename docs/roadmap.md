@@ -6,7 +6,7 @@ block them; they are **not commitments**.
 | Phase | Theme                    | Status      |
 | ----- | ------------------------ | ----------- |
 | 0     | Architecture foundation  | **Done**    |
-| 1     | Core vertical slice      | Next        |
+| 1     | Core vertical slice      | **Done**    |
 | 2     | Mathematical primitives  | Planned     |
 | 3     | Parameters and animation | Planned     |
 | 4     | Educational interactions | Planned     |
@@ -28,19 +28,25 @@ block them; they are **not commitments**.
 
 Goal: prove every layer with the smallest end-to-end slice.
 
-1. **spec** — v0.1 schema, `validateSpec`, referential checks, JSON Schema export.
-2. **math** — parser wrapper, whitelist, evaluator, limits, error mapping.
-3. **core** — compile, dependency graph, `EyeVizEngine` (parameters, time, deg→rad), point,
-   segment, curve, sampler, renderer contract.
-4. **renderer-three** — points, segments, curves, axes option, themes, render-on-demand, disposal.
-5. **react** — `<EyeVizScene>`, `useEyeViz()`; framework-agnostic `mount()` in renderer-three.
-6. **playground** — editor, live validation with error locations, live preview, generated
-   parameter controls, example selector, copy/export; invalid edits keep the last valid scene.
-7. **examples** — points & segments, sine curve, helix.
-8. API report (API Extractor) and bundle-size budget before the first publish.
+- [x] **spec** — v0.1 schema, `validateSpec`, referential checks, JSON Schema export
+- [x] **math** — math.js parser behind a whitelist, own evaluator, limits, error mapping
+- [x] **core** — `compileScene`, dependency graph, `EyeVizEngine` (parameters, time,
+      deg→rad, incremental updates), point, segment, curve, discontinuity-aware sampler,
+      renderer contract
+- [x] **renderer-three** — points, segments, curves, axes/grid, light/dark themes,
+      render-on-demand, disposal; framework-agnostic `mount()`
+- [x] **react** — `<EyeVizScene>` (lazy Three.js, SSR-safe), `useEyeViz()`, `useEyeVizState()`
+- [x] **playground** — Monaco editor with schema autocomplete and inline issues, validation
+      panel with locations, live preview that keeps the last valid scene, generated controls,
+      example selector, format/copy/download, responsive layout
+- [x] **examples** — points & segments, sine curve, helix (compiled by a core test)
 
-Done when `pnpm install && pnpm dev` opens a playground that renders a spec interactively and
-all success criteria in the project brief are met.
+Before the first npm publish:
+
+- [ ] Decide whether to replace the math.js parser (≈90 kB gzip of the ≈127 kB runtime) with
+      a small hand-written parser behind the same API ([ADR-0002](adr/0002-expression-engine.md))
+- [ ] API report (API Extractor) and bundle-size budget in CI
+- [ ] Automated browser test for the Three.js renderer lifecycle
 
 ## Phase 2 — Mathematical primitives
 

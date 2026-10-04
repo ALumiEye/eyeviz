@@ -38,7 +38,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "check:package": "publint --strict && attw --pack ."
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 # Renderer Contract
 
-> Status: specified in Phase 0, implemented in Phase 1 by `@alumieye/eyeviz-renderer-three`.
+> Status: implemented by `@alumieye/eyeviz-renderer-three`.
 
 A renderer turns **Scene State** into pixels. It never reads the raw Scene Spec and never
 evaluates expressions; everything it draws has already been computed by `core`. This is what
@@ -27,8 +27,17 @@ Mounting is renderer-specific and therefore not part of the shared interface. Th
 renderer takes its container in the constructor:
 
 ```ts
-const renderer = new ThreeRenderer(container, { theme: "auto", axes: true });
+const renderer = new ThreeRenderer(container, { theme: "auto", axes: true, grid: true });
+renderer.setModel(engine.model, engine.getState());
+engine.subscribe((state, changed) => renderer.update(state, changed));
 ```
+
+`mount(container, spec, options)` does exactly this and returns `{ engine, renderer, dispose }`.
+It is the framework-agnostic entry point for Angular, Vue or plain HTML.
+
+When `setModel` receives a new model (e.g. the spec was edited), the renderer keeps the
+user's current camera unless the spec's `camera` changed. One WebGL context is reused for
+the renderer's whole lifetime.
 
 ## Responsibilities
 
@@ -79,5 +88,7 @@ development; the React adapter relies on dispose being complete and safe to call
 
 ## Testing
 
-Translation logic (state → geometry parameters, theme defaults, change handling) is tested
-without WebGL. Pixel-level screenshot tests are deliberately postponed.
+`SceneGraph` (state → Three.js objects, colors, updates, disposal of every geometry and
+material) is unit-tested in Node without WebGL. `ThreeRenderer`'s WebGL, observer and control
+lifecycle is exercised in the playground; automated browser tests are not set up yet.
+Pixel-level screenshot tests are deliberately postponed.

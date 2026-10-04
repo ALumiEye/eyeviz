@@ -1,14 +1,28 @@
 /**
  * @alumieye/eyeviz-spec
  *
- * The EyeViz Scene Specification: types, schema, validation and versioning.
+ * The EyeViz Scene Specification: types, validation, versioning and JSON Schema.
  * This package must stay free of rendering, DOM, React, Three.js and math-engine code.
- *
- * Status: Phase 0 skeleton. The V0.1 schema is specified in docs/scene-spec.md and
- * is implemented in Phase 1.
  */
-
-/** The Scene Specification version this package understands. */
-export const SPEC_VERSION = "0.1" as const;
-
-export type SpecVersion = typeof SPEC_VERSION;
+export { SPEC_VERSION, type SpecVersion } from "./version";
+export { SPEC_LIMITS, ID_PATTERN } from "./limits";
+export { EyeVizError, formatPath, type EyeVizIssue, type EyeVizIssueCode } from "./issues";
+export { validateSpec, type ValidationResult } from "./validate";
+export { getSceneSpecJsonSchema } from "./json-schema";
+export type {
+  AngleUnit,
+  BooleanParameterSpec,
+  CameraSpec,
+  CurveSpec,
+  NumberParameterSpec,
+  NumberVec3,
+  ParameterSpec,
+  PointSpec,
+  Scalar,
+  SceneMetadata,
+  SceneObjectSpec,
+  SceneObjectType,
+  SceneSpec,
+  SegmentSpec,
+  Vec3,
+} from "./types";

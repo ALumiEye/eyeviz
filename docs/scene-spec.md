@@ -1,6 +1,6 @@
 # EyeViz Scene Specification v0.1
 
-> Status: **Draft.** Implemented in Phase 1. Version `0.1` may still change until the first
+> Status: **Draft, implemented.** Version `0.1` may still change until the first
 > npm release; after that, changes are additive or require a new version.
 > See [ADR-0007](adr/0007-spec-versioning.md).
 

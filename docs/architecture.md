@@ -1,7 +1,6 @@
 # EyeViz Architecture
 
-> Status: Phase 0. This document describes the target architecture for Phase 1. Sections
-> marked _Planned_ describe code that does not exist yet.
+> Status: Phase 1 implemented. APIs are **experimental** until the first npm release.
 
 ## 1. What EyeViz is
 
@@ -73,17 +72,17 @@ Boundaries are enforced by tooling, not convention:
    `document`, `window` or `HTMLElement` cannot appear there.
 5. **pnpm's strict `node_modules`** — undeclared dependencies cannot be resolved.
 
-## 4. Scene Model (_Planned_)
+## 4. Scene Model
 
 ```ts
 interface SceneModel {
   readonly version: "0.1";
   readonly metadata: SceneMetadata;
-  readonly camera: CameraModel;
-  readonly parameters: ReadonlyMap<string, ParameterModel>;
+  readonly camera?: CameraSpec;
+  readonly parameters: ReadonlyMap<string, ParameterModel>; // spec order, with defaults
   readonly objects: ReadonlyMap<string, ObjectModel>; // compiled expressions, resolved refs
   readonly order: readonly string[]; // topological evaluation order
-  readonly dependents: ReadonlyMap<string, ReadonlySet<string>>; // symbol → object ids
+  readonly dependents: ReadonlyMap<string, ReadonlySet<string>>; // symbol/object → object ids
 }
 ```
 
@@ -95,9 +94,13 @@ Compilation steps:
 1. Structural validation (schema) — `spec`.
 2. Referential validation: duplicate IDs, missing references, wrong reference types — `spec`.
 3. Expression compilation and symbol validation — `core` using `math`.
-4. Dependency graph construction and cycle detection — `core`.
+4. Reserved names (`t`, `pi`, `e`, function names) — `core`.
+5. Dependency graph construction and cycle detection — `core`.
 
-## 5. Scene State (_Planned_)
+Models are frozen and branded: `isSceneModel(value)` is true only for models produced by
+`compileScene`, so `new EyeVizEngine(model)` can skip re-validation safely.
+
+## 5. Scene State
 
 ```ts
 interface SceneState {
@@ -107,23 +110,30 @@ interface SceneState {
   readonly issues: readonly EyeVizIssue[]; // runtime (numerical) issues, never thrown
 }
 
+// Every object state also has: id, visible, valid, issues.
 type ObjectState =
-  | { type: "point"; visible: boolean; valid: boolean; position: Vec3 }
-  | { type: "segment"; visible: boolean; valid: boolean; from: Vec3; to: Vec3 }
-  | { type: "curve"; visible: boolean; valid: boolean; polylines: readonly Float64Array[] };
+  | { type: "point"; position: NumberVec3 }
+  | { type: "segment"; from: NumberVec3; to: NumberVec3 }
+  | { type: "curve"; polylines: readonly Float64Array[] }; // interleaved x, y, z
 ```
 
 - **Structural sharing:** an object whose inputs did not change keeps the same state object
   identity, so renderers and React can diff by reference.
 - **Curves are sampled in `core`**, not in a renderer, so every renderer draws the same
   geometry and sampling is testable without a browser. Polylines are split at non-finite
-  values and suspected discontinuities. Sample density is an engine option, never a spec field.
+  values and discontinuities (a bisection test distinguishes jumps and asymptotes from steep
+  but continuous curves). Sample density is an engine option, never a spec field: 256 per
+  curve by default, at most 4096, and at most 100 000 per scene.
+- Hidden curves are not sampled; they are sampled when they become visible.
+- `state.parameters` keeps its identity while only time changes, so UIs can subscribe cheaply.
 
-## 6. Engine and incremental updates (_Planned_)
+## 6. Engine and incremental updates
 
 ```ts
 const engine = new EyeVizEngine(spec); // throws EyeVizError({ issues }) if invalid
-engine.setParameter("theta", 60);
+engine.getParameters(); // definitions, for generating controls
+engine.setParameter("theta", 60); // clamped to [min, max]
+engine.setParameters({ r: 2, theta: 45 }); // one update
 engine.setTime(1.5);
 const state = engine.getState();
 const unsubscribe = engine.subscribe((state, changed) => {
@@ -135,7 +145,7 @@ const unsubscribe = engine.subscribe((state, changed) => {
 dependents (e.g. point `P` and then segment `OP`), producing a new state snapshot and a
 `changed` set. The engine never touches the DOM and runs unchanged in Node, workers and tests.
 
-## 7. Error model (_Planned_)
+## 7. Error model
 
 All public errors are plain, serializable objects:
 
@@ -148,9 +158,10 @@ interface EyeVizIssue {
 }
 ```
 
-Codes: `SCHEMA_VALIDATION`, `UNSUPPORTED_VERSION`, `DUPLICATE_ID`, `MISSING_REFERENCE`,
-`INVALID_REFERENCE_TYPE`, `EXPRESSION_SYNTAX`, `UNKNOWN_SYMBOL`, `UNKNOWN_FUNCTION`,
-`CIRCULAR_DEPENDENCY`, `EXPRESSION_EVALUATION`, `LIMIT_EXCEEDED`.
+Codes: `SCHEMA_VALIDATION`, `UNSUPPORTED_VERSION`, `DUPLICATE_ID`, `RESERVED_NAME`,
+`MISSING_REFERENCE`, `INVALID_REFERENCE_TYPE`, `INVALID_PARAMETER`, `EXPRESSION_SYNTAX`,
+`UNKNOWN_SYMBOL`, `UNKNOWN_FUNCTION`, `CIRCULAR_DEPENDENCY`, `EXPRESSION_EVALUATION`,
+`LIMIT_EXCEEDED`. Unknown symbols include a "Did you mean …?" suggestion when one is close.
 
 - Compile-time issues prevent an engine from being created.
 - Runtime numerical issues (e.g. `sqrt(-1)`) never throw: the object is marked
@@ -181,8 +192,8 @@ Consumers install one package and import by subpath:
 
 ```ts
 import { validateSpec } from "@alumieye/eyeviz"; // renderer-neutral, ESM + CJS
-import { mount } from "@alumieye/eyeviz/three"; // framework-agnostic (Planned)
-import { EyeVizScene } from "@alumieye/eyeviz/react"; // React (Planned)
+import { mount } from "@alumieye/eyeviz/three"; // framework-agnostic
+import { EyeVizScene } from "@alumieye/eyeviz/react"; // React
 ```
 
 Individual packages are also published. All packages share one version number.

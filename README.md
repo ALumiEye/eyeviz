@@ -6,10 +6,10 @@ EyeViz is an open-source interactive STEM visualization engine by ALumiEye.
 
 _From equations to interactive visualizations._
 
-> **Project status: Phase 0 — architecture foundation.** The repository structure, package
-> boundaries, tooling and specifications are in place. The engine, renderer and playground
-> are being built in Phase 1. Nothing is published to npm yet, and the APIs shown below are
-> **planned**, not available.
+> **Project status: Phase 1 — core vertical slice.** Scene Spec v0.1 (points, segments,
+> curves, parameters), validation, the safe expression engine, the deterministic runtime, the
+> Three.js renderer, React integration and the playground work end to end. Nothing is
+> published to npm yet; all APIs are **experimental** until the first release.
 
 ## What EyeViz is
 
@@ -60,7 +60,7 @@ versioned and rendered anywhere.
 Moving the `theta` slider moves `P`, and the segment `OP` follows. See
 [docs/scene-spec.md](docs/scene-spec.md) for the full v0.1 draft.
 
-## Planned usage (Phase 1)
+## Usage
 
 ```bash
 npm install @alumieye/eyeviz three
@@ -73,13 +73,30 @@ import { EyeVizScene } from "@alumieye/eyeviz/react";
 ```
 
 ```ts
-// Without React or a browser:
+// Any framework, or plain HTML:
+import { mount } from "@alumieye/eyeviz/three";
+
+const view = mount(document.getElementById("scene")!, scene);
+view.engine.setParameter("theta", 45);
+view.dispose();
+```
+
+```ts
+// Without React or a browser (Node, workers, tests):
 import { EyeVizEngine } from "@alumieye/eyeviz";
 
 const engine = new EyeVizEngine(scene);
 engine.setParameter("theta", 60);
 engine.setTime(1.5);
-const state = engine.getState();
+const state = engine.getState(); // evaluated coordinates, curve polylines, issues
+```
+
+```ts
+// Validate untrusted input (e.g. LLM output) without throwing:
+import { compileScene } from "@alumieye/eyeviz";
+
+const result = compileScene(json);
+if (!result.ok) console.log(result.issues); // [{ code, message, path, details }]
 ```
 
 ## Packages
@@ -130,7 +147,7 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm check:boundari
 | Phase | Theme                                                                       | Status  |
 | ----- | --------------------------------------------------------------------------- | ------- |
 | 0     | Architecture foundation                                                     | Done    |
-| 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Next    |
+| 1     | Core vertical slice: spec, math, core, Three.js renderer, React, playground | Done    |
 | 2     | Vectors, planes, surfaces, labels, axes                                     | Planned |
 | 3     | Timeline and animation                                                      | Planned |
 | 4     | Steps, highlight, focus                                                     | Planned |

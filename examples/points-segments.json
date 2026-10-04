@@ -1,0 +1,68 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Triangle with a moving vertex",
+    "description": "Triangle ABC. Vertex C sits at distance r from A at angle theta, raised to height h. Moving a point moves every segment attached to it.",
+    "lang": "en"
+  },
+  "camera": { "position": [3, -9, 6], "target": [2, 1, 1] },
+  "parameters": [
+    {
+      "id": "theta",
+      "value": 60,
+      "unit": "deg",
+      "min": 0,
+      "max": 180,
+      "step": 1,
+      "label": "Angle θ",
+      "control": "slider"
+    },
+    {
+      "id": "r",
+      "value": 4,
+      "min": 1,
+      "max": 6,
+      "step": 0.1,
+      "label": "Distance r",
+      "control": "slider"
+    },
+    {
+      "id": "h",
+      "value": 2,
+      "min": 0,
+      "max": 4,
+      "step": 0.1,
+      "label": "Height h",
+      "control": "slider"
+    },
+    { "id": "showSides", "value": true, "label": "Show sides AC and BC", "control": "toggle" }
+  ],
+  "objects": [
+    { "id": "A", "type": "point", "name": "Point A", "position": [0, 0, 0] },
+    { "id": "B", "type": "point", "name": "Point B", "position": [4, 0, 0] },
+    {
+      "id": "C",
+      "type": "point",
+      "name": "Point C",
+      "position": ["r*cos(theta)", "r*sin(theta)", "h"],
+      "color": "#d6336c"
+    },
+    { "id": "AB", "type": "segment", "name": "Side AB", "from": "A", "to": "B" },
+    {
+      "id": "AC",
+      "type": "segment",
+      "name": "Side AC",
+      "from": "A",
+      "to": "C",
+      "visible": "showSides"
+    },
+    {
+      "id": "BC",
+      "type": "segment",
+      "name": "Side BC",
+      "from": "B",
+      "to": "C",
+      "visible": "showSides"
+    }
+  ]
+}

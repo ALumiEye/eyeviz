@@ -1,0 +1,320 @@
+/**
+ * Scene Spec → Scene Model.
+ *
+ * 1. structural + referential validation (`@alumieye/eyeviz-spec`)
+ * 2. reserved names
+ * 3. expression compilation and symbol validation (`@alumieye/eyeviz-math`)
+ * 4. dependency graph and evaluation order (cycle detection)
+ *
+ * Every issue found is reported, not just the first.
+ */
+import {
+  compileExpression,
+  isFunctionName,
+  SUPPORTED_CONSTANTS,
+  SUPPORTED_FUNCTIONS,
+} from "@alumieye/eyeviz-math";
+import {
+  validateSpec,
+  type EyeVizIssue,
+  type Scalar,
+  type SceneObjectSpec,
+  type SceneSpec,
+  type Vec3,
+} from "@alumieye/eyeviz-spec";
+import {
+  TIME_SYMBOL,
+  type ObjectModel,
+  type ParameterModel,
+  type ScalarModel,
+  type SceneModel,
+  type Vec3Model,
+  type VisibilityModel,
+} from "./model";
+import { suggest } from "./suggest";
+
+export type CompileResult =
+  | { readonly ok: true; readonly model: SceneModel }
+  | { readonly ok: false; readonly issues: readonly EyeVizIssue[] };
+
+const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  TIME_SYMBOL,
+  ...SUPPORTED_CONSTANTS,
+  ...SUPPORTED_FUNCTIONS,
+]);
+
+const compiledModels = new WeakSet<object>();
+
+/** True if `value` is a model produced by `compileScene` (and therefore already validated). */
+export function isSceneModel(value: unknown): value is SceneModel {
+  return typeof value === "object" && value !== null && compiledModels.has(value);
+}
+
+/** Validates and compiles untrusted input into a Scene Model. Never throws for bad input. */
+export function compileScene(input: unknown): CompileResult {
+  const validation = validateSpec(input);
+  if (!validation.ok) return validation;
+  return new Compiler(validation.spec).run();
+}
+
+class Compiler {
+  private readonly issues: EyeVizIssue[] = [];
+  private readonly numberParameters = new Set<string>();
+  private readonly booleanParameters = new Set<string>();
+  private readonly objectIds = new Set<string>();
+
+  constructor(private readonly spec: SceneSpec) {}
+
+  run(): CompileResult {
+    const parameters = this.compileParameters();
+    for (const object of this.spec.objects) this.objectIds.add(object.id);
+    this.checkReservedNames();
+
+    const objects = new Map<string, ObjectModel>();
+    this.spec.objects.forEach((object, index) => {
+      objects.set(object.id, this.compileObject(object, index));
+    });
+
+    const order = this.evaluationOrder(objects);
+    if (this.issues.length > 0) return { ok: false, issues: this.issues };
+
+    const dependents = new Map<string, Set<string>>();
+    for (const object of objects.values()) {
+      for (const dependency of object.dependencies) {
+        let set = dependents.get(dependency);
+        if (!set) dependents.set(dependency, (set = new Set()));
+        set.add(object.id);
+      }
+    }
+
+    const model: SceneModel = Object.freeze({
+      version: this.spec.version,
+      metadata: Object.freeze({ ...this.spec.metadata }),
+      ...(this.spec.camera ? { camera: this.spec.camera } : {}),
+      parameters,
+      objects,
+      order,
+      dependents,
+    });
+    compiledModels.add(model);
+    return { ok: true, model };
+  }
+
+  private compileParameters(): Map<string, ParameterModel> {
+    const parameters = new Map<string, ParameterModel>();
+    this.spec.parameters?.forEach((p, index) => {
+      const common = {
+        id: p.id,
+        index,
+        interactive: p.interactive ?? true,
+        ...(p.label !== undefined ? { label: p.label } : {}),
+      };
+      if (typeof p.value === "number") {
+        const n = p as Extract<typeof p, { value: number }>;
+        this.numberParameters.add(p.id);
+        parameters.set(p.id, {
+          kind: "number",
+          ...common,
+          defaultValue: n.value,
+          ...(n.min !== undefined ? { min: n.min } : {}),
+          ...(n.max !== undefined ? { max: n.max } : {}),
+          ...(n.step !== undefined ? { step: n.step } : {}),
+          ...(n.unit !== undefined ? { unit: n.unit } : {}),
+          ...(n.control !== undefined ? { control: n.control } : {}),
+        });
+      } else {
+        const b = p as Extract<typeof p, { value: boolean }>;
+        this.booleanParameters.add(p.id);
+        parameters.set(p.id, {
+          kind: "boolean",
+          ...common,
+          defaultValue: b.value,
+          ...(b.control !== undefined ? { control: b.control } : {}),
+        });
+      }
+    });
+    return parameters;
+  }
+
+  private checkReservedNames(): void {
+    const check = (name: string, path: string) => {
+      if (RESERVED_NAMES.has(name)) {
+        this.issues.push({
+          code: "RESERVED_NAME",
+          message: `'${name}' is reserved (time, constants and function names cannot be used as IDs)`,
+          path,
+          details: { name },
+        });
+      }
+    };
+    this.spec.parameters?.forEach((p, i) => check(p.id, `parameters[${i}].id`));
+    this.spec.objects.forEach((o, i) => {
+      check(o.id, `objects[${i}].id`);
+      if (o.type === "curve") check(o.variable, `objects[${i}].variable`);
+    });
+  }
+
+  private compileObject(object: SceneObjectSpec, index: number): ObjectModel {
+    const at = `objects[${index}]`;
+    const dependencies = new Set<string>();
+    const visible: VisibilityModel =
+      typeof object.visible === "string"
+        ? { kind: "parameter", id: object.visible }
+        : { kind: "constant", value: object.visible ?? true };
+    if (visible.kind === "parameter") dependencies.add(visible.id);
+
+    const base = {
+      id: object.id,
+      index,
+      visible,
+      dependencies,
+      ...(object.name !== undefined ? { name: object.name } : {}),
+      ...(object.color !== undefined ? { color: object.color } : {}),
+    };
+
+    switch (object.type) {
+      case "point":
+        return {
+          ...base,
+          type: "point",
+          position: this.compileVec3(object.position, `${at}.position`, dependencies),
+        };
+      case "segment":
+        dependencies.add(object.from);
+        dependencies.add(object.to);
+        return { ...base, type: "segment", from: object.from, to: object.to };
+      case "curve":
+        return {
+          ...base,
+          type: "curve",
+          variable: object.variable,
+          domain: [
+            this.compileScalar(object.domain[0], `${at}.domain[0]`, dependencies),
+            this.compileScalar(object.domain[1], `${at}.domain[1]`, dependencies),
+          ],
+          position: this.compileVec3(
+            object.position,
+            `${at}.position`,
+            dependencies,
+            object.variable,
+          ),
+        };
+    }
+  }
+
+  private compileVec3(
+    vec: Vec3,
+    path: string,
+    dependencies: Set<string>,
+    local?: string,
+  ): Vec3Model {
+    return [
+      this.compileScalar(vec[0], `${path}[0]`, dependencies, local),
+      this.compileScalar(vec[1], `${path}[1]`, dependencies, local),
+      this.compileScalar(vec[2], `${path}[2]`, dependencies, local),
+    ];
+  }
+
+  private compileScalar(
+    value: Scalar,
+    path: string,
+    dependencies: Set<string>,
+    local?: string,
+  ): ScalarModel {
+    if (typeof value === "number") return { kind: "constant", value };
+
+    const result = compileExpression(value);
+    if (!result.ok) {
+      this.issues.push({ ...result.issue, path });
+      return { kind: "constant", value: NaN };
+    }
+
+    for (const symbol of result.expression.symbols) {
+      if (symbol === local) continue;
+      if (symbol === TIME_SYMBOL || this.numberParameters.has(symbol)) {
+        dependencies.add(symbol);
+        continue;
+      }
+      this.issues.push(this.symbolIssue(symbol, value, path, local));
+    }
+    return { kind: "expression", expression: result.expression };
+  }
+
+  private symbolIssue(symbol: string, source: string, path: string, local?: string): EyeVizIssue {
+    const where = `in expression ${JSON.stringify(source)}`;
+    if (this.booleanParameters.has(symbol)) {
+      return {
+        code: "INVALID_REFERENCE_TYPE",
+        message: `Boolean parameter '${symbol}' cannot be used ${where}; only number parameters can`,
+        path,
+        details: { symbol },
+      };
+    }
+    if (this.objectIds.has(symbol)) {
+      return {
+        code: "INVALID_REFERENCE_TYPE",
+        message: `Object '${symbol}' cannot be used ${where}; expressions may only use number parameters, '${TIME_SYMBOL}'${local ? ` and '${local}'` : ""}`,
+        path,
+        details: { symbol },
+      };
+    }
+    if (isFunctionName(symbol)) {
+      return {
+        code: "EXPRESSION_SYNTAX",
+        message: `Function '${symbol}' must be called with arguments, e.g. ${symbol}(x), ${where}`,
+        path,
+        details: { symbol },
+      };
+    }
+    const candidates = [...this.numberParameters, TIME_SYMBOL, ...(local ? [local] : [])];
+    const suggestion = suggest(symbol, candidates);
+    return {
+      code: "UNKNOWN_SYMBOL",
+      message: `Unknown symbol '${symbol}' ${where}${suggestion ? `. Did you mean '${suggestion}'?` : ""}`,
+      path,
+      details: suggestion ? { symbol, suggestion } : { symbol },
+    };
+  }
+
+  /** Kahn's algorithm over object → object dependencies; ties keep spec order. */
+  private evaluationOrder(objects: ReadonlyMap<string, ObjectModel>): string[] {
+    const indegree = new Map<string, number>();
+    const users = new Map<string, string[]>();
+    for (const object of objects.values()) {
+      let count = 0;
+      for (const dependency of object.dependencies) {
+        if (!objects.has(dependency)) continue;
+        count++;
+        let list = users.get(dependency);
+        if (!list) users.set(dependency, (list = []));
+        list.push(object.id);
+      }
+      indegree.set(object.id, count);
+    }
+
+    const order: string[] = [];
+    const ready = [...objects.keys()].filter((id) => indegree.get(id) === 0);
+    while (ready.length > 0) {
+      const id = ready.shift() as string;
+      order.push(id);
+      for (const user of users.get(id) ?? []) {
+        const remaining = (indegree.get(user) as number) - 1;
+        indegree.set(user, remaining);
+        if (remaining === 0) ready.push(user);
+      }
+    }
+
+    if (order.length < objects.size) {
+      const cyclic = [...objects.values()].filter((o) => (indegree.get(o.id) as number) > 0);
+      for (const object of cyclic) {
+        this.issues.push({
+          code: "CIRCULAR_DEPENDENCY",
+          message: `'${object.id}' is part of a circular dependency (${cyclic.map((o) => o.id).join(" → ")})`,
+          path: `objects[${object.index}]`,
+          details: { cycle: cyclic.map((o) => o.id) },
+        });
+      }
+    }
+    return order;
+  }
+}

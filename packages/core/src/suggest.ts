@@ -1,0 +1,32 @@
+/** Returns the candidate closest to `name` (edit distance ≤ 2), to power "Did you mean…?" hints. */
+export function suggest(name: string, candidates: Iterable<string>): string | undefined {
+  let best: string | undefined;
+  let bestDistance = 3;
+  const lower = name.toLowerCase();
+  for (const candidate of candidates) {
+    const distance = candidate.toLowerCase() === lower ? 0 : editDistance(name, candidate);
+    if (distance < bestDistance) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        (previous[j] as number) + 1,
+        (current[j - 1] as number) + 1,
+        (previous[j - 1] as number) + cost,
+      );
+    }
+    previous = current;
+  }
+  return previous[b.length] as number;
+}
