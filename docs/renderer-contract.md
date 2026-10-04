@@ -87,6 +87,10 @@ the renderer's whole lifetime.
   are matched within 14 CSS px on screen (small targets), lines within 8 px, meshes and planes
   by ray casting. `setSelection(id)` emphasizes the selected object without dimming others.
   `mount()` wires the two together.
+- **Dragging:** pressing a point that declares `drag` starts a drag instead of orbiting.
+  While the pointer moves, `onDrag(id, target)` reports the world position on the drag plane
+  (x–y in 2D; the plane through the point facing the viewer in 3D); hosts pass it to
+  `engine.dragPoint`. The cursor shows `grab`/`grabbing` over draggable points.
 
 ## Disposal checklist
 

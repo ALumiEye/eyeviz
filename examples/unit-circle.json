@@ -1,0 +1,83 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Unit circle",
+    "description": "Drag P around the unit circle. Its projections on the axes are cos θ and sin θ.",
+    "lang": "en"
+  },
+  "scene": { "dimension": "2d" },
+  "parameters": [
+    {
+      "id": "theta",
+      "value": 40,
+      "unit": "deg",
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "label": "Angle θ",
+      "control": "slider"
+    }
+  ],
+  "objects": [
+    {
+      "id": "circle",
+      "type": "curve",
+      "name": "Unit circle",
+      "variable": "s",
+      "domain": [0, "2*pi"],
+      "position": ["cos(s)", "sin(s)", 0],
+      "color": "#868e96"
+    },
+    { "id": "O", "type": "point", "name": "Origin", "position": [0, 0, 0] },
+    {
+      "id": "P",
+      "type": "point",
+      "name": "P (drag me)",
+      "position": ["cos(theta)", "sin(theta)", 0],
+      "drag": ["theta"],
+      "color": "#d6336c"
+    },
+    { "id": "Px", "type": "point", "name": "Projection on x", "position": ["cos(theta)", 0, 0] },
+    { "id": "Py", "type": "point", "name": "Projection on y", "position": [0, "sin(theta)", 0] },
+    { "id": "OP", "type": "segment", "name": "Radius OP", "from": "O", "to": "P" },
+    {
+      "id": "cosine",
+      "type": "segment",
+      "name": "cos θ",
+      "from": "O",
+      "to": "Px",
+      "color": "#1c7ed6"
+    },
+    {
+      "id": "sine",
+      "type": "segment",
+      "name": "sin θ",
+      "from": "Px",
+      "to": "P",
+      "color": "#e8590c"
+    },
+    {
+      "id": "guide",
+      "type": "segment",
+      "name": "Guide to the y-axis",
+      "from": "Py",
+      "to": "P",
+      "color": "#adb5bd"
+    },
+    { "id": "lP", "type": "label", "text": "P", "at": "P" },
+    {
+      "id": "lcos",
+      "type": "label",
+      "text": "cos θ",
+      "at": ["cos(theta)/2", -0.08, 0],
+      "color": "#1c7ed6"
+    },
+    {
+      "id": "lsin",
+      "type": "label",
+      "text": "sin θ",
+      "at": ["cos(theta)", "sin(theta)/2", 0],
+      "color": "#e8590c"
+    }
+  ]
+}

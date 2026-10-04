@@ -91,6 +91,13 @@ interface ObjectSpecBase {
 export interface PointSpec extends ObjectSpecBase {
   readonly type: "point";
   readonly position: Vec3;
+  /**
+   * Number parameters that dragging the point may change (1–3). The engine picks the values
+   * that bring the point closest to the pointer, so the position's formula is the constraint:
+   * `["r*cos(theta)", "r*sin(theta)", 0]` with `drag: ["theta"]` moves along a circle.
+   * See docs/adr/0018-direct-manipulation.md.
+   */
+  readonly drag?: readonly string[];
 }
 
 export interface SegmentSpec extends ObjectSpecBase {

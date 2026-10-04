@@ -1,8 +1,20 @@
-import { EyeVizError, type EyeVizIssue } from "@alumieye/eyeviz-spec";
+import { EyeVizError, type EyeVizIssue, type NumberVec3 } from "@alumieye/eyeviz-spec";
 import { compileScene, isSceneModel } from "./compile";
-import { evaluateObject, evaluateStandalone, type EvaluationContext } from "./evaluate";
+import { solveDrag } from "./drag";
+import {
+  evaluateObject,
+  evaluateStandalone,
+  evaluateVec3,
+  type EvaluationContext,
+} from "./evaluate";
 import type { ExpressionScope } from "@alumieye/eyeviz-math";
-import { TIME_SYMBOL, type ObjectModel, type ParameterModel, type SceneModel } from "./model";
+import {
+  TIME_SYMBOL,
+  type NumberParameterModel,
+  type ObjectModel,
+  type ParameterModel,
+  type SceneModel,
+} from "./model";
 import type { ObjectState, SceneState } from "./state";
 
 export interface EngineOptions {
@@ -160,6 +172,50 @@ export class EyeVizEngine {
     this.#commit(this.#evaluate(time, this.#values, this.#state, new Set([TIME_SYMBOL])));
   }
 
+  /** True if the point with `id` declares `drag` parameters. */
+  isDraggable(id: string): boolean {
+    const object = this.model.objects.get(id);
+    return object?.type === "point" && object.drag !== undefined;
+  }
+
+  /**
+   * Moves a draggable point as close as possible to `target` by changing its `drag`
+   * parameters (respecting their min, max and step). The point's formula acts as the
+   * constraint, e.g. a point defined by an angle stays on its circle.
+   * @throws EyeVizError if the point does not exist or is not draggable.
+   */
+  dragPoint(id: string, target: NumberVec3): void {
+    const point = this.model.objects.get(id);
+    if (point?.type !== "point" || !point.drag) {
+      throw new EyeVizError([
+        {
+          code: "INVALID_PARAMETER",
+          message: `'${id}' is not a draggable point`,
+          path: "",
+          details: { id },
+        },
+      ]);
+    }
+    if (!target.every(Number.isFinite)) return;
+    const parameters = point.drag.map((p) => this.model.parameters.get(p) as NumberParameterModel);
+    const time = this.#state.time;
+    const values = { ...this.#values };
+    const solved = solveDrag(
+      (candidate) => {
+        parameters.forEach((p, i) => (values[p.id] = candidate[i] as number));
+        return evaluateVec3(point.position, this.#scope(values, time).scope);
+      },
+      parameters.map((p) => this.#values[p.id] as number),
+      parameters.map((p) => ({
+        ...(p.min !== undefined ? { min: p.min } : {}),
+        ...(p.max !== undefined ? { max: p.max } : {}),
+        ...(p.step !== undefined ? { step: p.step } : {}),
+      })),
+      target,
+    );
+    this.setParameters(Object.fromEntries(parameters.map((p, i) => [p.id, solved[i] as number])));
+  }
+
   /** Steps in order (empty when the scene has none). */
   getSteps(): SceneModel["steps"] {
     return this.model.steps;
@@ -234,17 +290,7 @@ export class EyeVizEngine {
     changedSymbols?: ReadonlySet<string>,
     alsoAffected?: ReadonlySet<string>,
   ): { state: SceneState; changed: ReadonlySet<string> } {
-    const scope: Record<string, number> = Object.create(null);
-    const booleans: Record<string, boolean> = Object.create(null);
-    for (const parameter of this.#parameterList) {
-      const value = values[parameter.id];
-      if (parameter.kind === "boolean") booleans[parameter.id] = value as boolean;
-      // Degree parameters are converted exactly once, here (docs/adr/0005-angle-units.md).
-      else
-        scope[parameter.id] =
-          parameter.unit === "deg" ? ((value as number) * Math.PI) / 180 : (value as number);
-    }
-    scope[TIME_SYMBOL] = time;
+    const { scope, booleans } = this.#scope(values, time);
 
     const affected = previous && changedSymbols ? this.#affected(changedSymbols) : undefined;
     for (const id of alsoAffected ?? []) affected?.add(id);
@@ -285,6 +331,25 @@ export class EyeVizEngine {
       ...(duration.value !== undefined ? { duration: duration.value } : {}),
     });
     return { state, changed: affected ?? new Set(this.model.order) };
+  }
+
+  /** Expression scope (numbers, angles in radians) and boolean values for `values` at `time`. */
+  #scope(
+    values: Readonly<Record<string, number | boolean>>,
+    time: number,
+  ): { scope: Record<string, number>; booleans: Record<string, boolean> } {
+    const scope: Record<string, number> = Object.create(null);
+    const booleans: Record<string, boolean> = Object.create(null);
+    for (const parameter of this.#parameterList) {
+      const value = values[parameter.id];
+      if (parameter.kind === "boolean") booleans[parameter.id] = value as boolean;
+      // Degree parameters are converted exactly once, here (docs/adr/0005-angle-units.md).
+      else
+        scope[parameter.id] =
+          parameter.unit === "deg" ? ((value as number) * Math.PI) / 180 : (value as number);
+    }
+    scope[TIME_SYMBOL] = time;
+    return { scope, booleans };
   }
 
   /** The timeline duration for the current parameters; invalid values are reported, not thrown. */

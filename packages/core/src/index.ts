@@ -18,6 +18,7 @@ export {
   type StateListener,
 } from "./engine";
 export { MAX_DOMAIN_MAGNITUDE } from "./evaluate";
+export { solveDrag, type DragBounds, type PositionFunction } from "./drag";
 export {
   Playback,
   type FrameScheduler,

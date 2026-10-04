@@ -10,7 +10,7 @@ block them; they are **not commitments**.
 | 2     | Mathematical primitives  | **Done**    |
 | 3     | Parameters and animation | **Done**    |
 | 4     | Educational interactions | **Done**    |
-| 5     | Direct manipulation      | Planned     |
+| 5     | Direct manipulation      | **Done**    |
 | 6     | Visual authoring         | Planned     |
 | 7     | Advanced STEM            | Exploratory |
 
@@ -81,7 +81,12 @@ discontinuity detection.
 
 ## Phase 5 — Direct manipulation
 
-Draggable points, inspector support, simple constraints.
+- [x] Draggable points via `drag` parameters; constraints by parametrization ([ADR-0018](adr/0018-direct-manipulation.md))
+- [x] Drag solver (scan + golden section, Levenberg–Marquardt), bounds and step snapping
+- [x] Renderer drag interaction (2D plane / view-facing plane in 3D, no orbiting while dragging)
+- [x] `mount()` and `<EyeVizScene>` drag by default (`draggable={false}` to disable)
+- [x] Playground inspector: live values (position, length, normal…), dependencies, drag parameters
+- [x] Examples: unit circle; draggable points in the triangle, sine, vectors and paraboloid examples
 
 ## Phase 6 — Visual authoring
 

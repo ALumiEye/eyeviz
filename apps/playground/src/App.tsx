@@ -7,6 +7,7 @@ import { SpecEditor } from "./editor/SpecEditor";
 import { EXAMPLES } from "./examples";
 import { formatJson } from "./format";
 import { ParameterControls } from "./ParameterControls";
+import { SelectionPanel } from "./SelectionPanel";
 import { StepsBar } from "./StepsBar";
 import { TimelineBar } from "./TimelineBar";
 
@@ -175,25 +176,14 @@ export function App() {
             )}
           </div>
           {engine && selected && engine.model.objects.has(selected) ? (
-            <div className="selection" role="status">
-              <span>
-                Selected: <strong>{engine.model.objects.get(selected)?.name ?? selected}</strong>{" "}
-                <span className="muted">({engine.model.objects.get(selected)?.type})</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const index = engine.model.objects.get(selected)?.index;
-                  if (index !== undefined)
-                    setReveal({ range: locate(text, `objects[${index}]`), token: Math.random() });
-                }}
-              >
-                Show in spec
-              </button>
-              <button type="button" aria-label="Clear selection" onClick={() => setSelected(null)}>
-                ✕
-              </button>
-            </div>
+            <SelectionPanel
+              engine={engine}
+              id={selected}
+              onShowInSpec={(index) =>
+                setReveal({ range: locate(text, `objects[${index}]`), token: Math.random() })
+              }
+              onClear={() => setSelected(null)}
+            />
           ) : null}
           {engine ? <StepsBar engine={engine} /> : null}
           {engine?.model.animated ? <TimelineBar engine={engine} /> : null}

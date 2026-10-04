@@ -1,4 +1,5 @@
 import type { SceneModel, SceneRenderer, SceneState } from "@alumieye/eyeviz-core";
+import type { NumberVec3 } from "@alumieye/eyeviz-spec";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
@@ -24,6 +25,12 @@ export interface ThreeRendererOptions {
    * The renderer does not change the selection itself; call `setSelection` to show it.
    */
   readonly onSelect?: (id: string | null) => void;
+  /**
+   * Called continuously while the user drags a draggable point (one with `drag` parameters),
+   * with the world position under the pointer. Pass it to `engine.dragPoint(id, target)`.
+   * Without this callback, points cannot be dragged.
+   */
+  readonly onDrag?: (id: string, target: NumberVec3) => void;
 }
 
 interface CameraTween {
@@ -73,6 +80,7 @@ export class ThreeRenderer implements SceneRenderer {
   #cameraKey: string | undefined;
   #state: SceneState | undefined;
   #selected: string | null = null;
+  #draggable: ReadonlySet<string> = new Set();
   #tween: CameraTween | undefined;
   #frame = 0;
   #onScreen = true;
@@ -161,6 +169,9 @@ export class ThreeRenderer implements SceneRenderer {
     if (this.#disposed) return;
     this.#model = model;
     this.#state = state;
+    this.#draggable = new Set(
+      [...model.objects.values()].filter((o) => o.type === "point" && o.drag).map((o) => o.id),
+    );
     this.#tween = undefined;
     this.#bounds = computeBounds(state);
     this.#graph.setModel(model, state, { scale: this.#bounds.radius });
@@ -331,33 +342,92 @@ export class ThreeRenderer implements SceneRenderer {
     return Math.max(halfHeight, halfWidth / aspect) * 1.15;
   }
 
-  /** A click or tap (not a drag) picks the object under the pointer. */
+  /**
+   * Pointer handling: pressing a draggable point drags it (the camera stays still); a short
+   * press without movement elsewhere is a click that selects; any other drag orbits/pans.
+   */
   #listenForClicks(canvas: HTMLCanvasElement): void {
     let down: { x: number; y: number; time: number } | undefined;
-    const onDown = (event: PointerEvent) => {
-      down = event.isPrimary
-        ? { x: event.clientX, y: event.clientY, time: performance.now() }
-        : undefined;
+    let dragging: { id: string; plane: THREE.Plane } | undefined;
+
+    const pointerAt = (event: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        rect,
+        ndc: new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1,
+        ),
+      };
     };
+    const draggableAt = (event: PointerEvent) => {
+      if (!this.#options.onDrag || this.#draggable.size === 0) return null;
+      const { rect, ndc } = pointerAt(event);
+      return this.#graph.pickAnchor(
+        ndc,
+        this.#camera,
+        { width: rect.width, height: rect.height },
+        this.#draggable,
+      );
+    };
+
+    const onDown = (event: PointerEvent) => {
+      if (!event.isPrimary) return;
+      down = { x: event.clientX, y: event.clientY, time: performance.now() };
+      const id = draggableAt(event);
+      const anchor = id ? this.#graph.anchorOf(id) : undefined;
+      if (!id || !anchor) return;
+      // Drag on the plane through the point that faces the viewer (x–y plane in 2D).
+      const normal =
+        this.#dimension === "2d"
+          ? new THREE.Vector3(0, 0, 1)
+          : this.#camera.getWorldDirection(new THREE.Vector3());
+      dragging = { id, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(normal, anchor) };
+      this.#controls.enabled = false;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = "grabbing";
+      event.preventDefault();
+    };
+
+    const onMove = (event: PointerEvent) => {
+      if (dragging) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(pointerAt(event).ndc, this.#camera);
+        const hit = raycaster.ray.intersectPlane(dragging.plane, new THREE.Vector3());
+        if (hit) this.#options.onDrag?.(dragging.id, [hit.x, hit.y, hit.z]);
+        return;
+      }
+      if (event.buttons === 0) canvas.style.cursor = draggableAt(event) ? "grab" : "";
+    };
+
     const onUp = (event: PointerEvent) => {
       const start = down;
       down = undefined;
+      if (dragging) {
+        dragging = undefined;
+        this.#controls.enabled = true;
+        canvas.style.cursor = "grab";
+        if (canvas.hasPointerCapture(event.pointerId))
+          canvas.releasePointerCapture(event.pointerId);
+      }
       const onSelect = this.#options.onSelect;
       if (!start || !onSelect || !event.isPrimary) return;
       const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
       if (moved > 5 || performance.now() - start.time > 600) return; // a drag, not a click
-      const rect = canvas.getBoundingClientRect();
-      const pointer = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1,
-      );
-      onSelect(this.#graph.pick(pointer, this.#camera, { width: rect.width, height: rect.height }));
+      const { rect, ndc } = pointerAt(event);
+      onSelect(this.#graph.pick(ndc, this.#camera, { width: rect.width, height: rect.height }));
     };
-    canvas.addEventListener("pointerdown", onDown);
+
+    // Capture phase: runs before OrbitControls' own pointerdown, so a point drag never orbits.
+    canvas.addEventListener("pointerdown", onDown, { capture: true });
+    canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
     this.#cleanups.push(() => {
-      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointerdown", onDown, { capture: true });
+      canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
     });
   }
 

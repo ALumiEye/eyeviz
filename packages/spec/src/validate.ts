@@ -233,6 +233,33 @@ function checkIdsAndReferences(spec: SceneSpec): EyeVizIssue[] {
         break;
       }
       case "point":
+        object.drag?.forEach((ref, i) => {
+          const path = `${at}.drag[${i}]`;
+          const target = parameters.get(ref);
+          if (!target) {
+            issues.push(
+              objects.has(ref)
+                ? wrongType(ref, "number parameter", "object", path)
+                : missing(ref, "number parameter", path),
+            );
+          } else if (typeof target.param.value !== "number") {
+            issues.push(wrongType(ref, "number parameter", "boolean parameter", path));
+          } else if (target.param.interactive === false) {
+            issues.push({
+              code: "INVALID_PARAMETER",
+              message: `'${object.id}' cannot be dragged by '${ref}': that parameter is not interactive`,
+              path,
+              details: { id: ref },
+            });
+          }
+          if (object.drag?.indexOf(ref) !== i) {
+            issues.push({
+              code: "SCHEMA_VALIDATION",
+              message: `'${ref}' is listed twice in "drag"`,
+              path,
+            });
+          }
+        });
         break;
     }
   });

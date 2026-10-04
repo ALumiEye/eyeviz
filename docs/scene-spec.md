@@ -173,9 +173,18 @@ Colour is a presentation hint. Meaning must not be conveyed by colour alone.
 
 ### `point`
 
-| Field      | Type   | Notes                                          |
-| ---------- | ------ | ---------------------------------------------- |
-| `position` | `Vec3` | Expressions may use parameters, `t`, constants |
+| Field      | Type                       | Notes                                                            |
+| ---------- | -------------------------- | ---------------------------------------------------------------- |
+| `position` | `Vec3`                     | Expressions may use parameters, `t`, constants                   |
+| `drag`     | number parameter IDs (1–3) | Optional. Makes the point draggable by changing these parameters |
+
+Dragging moves the point as close to the pointer as its formula allows, so the formula is the
+constraint ([ADR-0018](adr/0018-direct-manipulation.md)). The parameters must be interactive,
+used by `position`, and are kept within their `min`/`max` and snapped to their `step`.
+
+```json
+{ "id": "P", "type": "point", "position": ["cos(theta)", "sin(theta)", 0], "drag": ["theta"] }
+```
 
 ### `segment`
 

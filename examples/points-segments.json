@@ -2,7 +2,7 @@
   "version": "0.1",
   "metadata": {
     "title": "Triangle with a moving vertex",
-    "description": "Triangle ABC. Vertex C sits at distance r from A at angle theta, raised to height h. Moving a point moves every segment attached to it.",
+    "description": "Triangle ABC. Vertex C sits at distance r from A at angle theta, raised to height h. Drag C or use the sliders. Moving a point moves every segment attached to it.",
     "lang": "en"
   },
   "camera": {
@@ -63,7 +63,8 @@
       "type": "point",
       "name": "Point C",
       "position": ["r*cos(theta)", "r*sin(theta)", "h"],
-      "color": "#d6336c"
+      "color": "#d6336c",
+      "drag": ["r", "theta"]
     },
     {
       "id": "AB",

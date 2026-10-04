@@ -28,6 +28,7 @@ export const EXAMPLES: readonly Example[] = Object.entries(modules)
 function rank(id: string): number {
   const order = [
     "points-segments",
+    "unit-circle",
     "sine-curve",
     "vectors",
     "projectile",

@@ -60,7 +60,12 @@ const objectBase = {
   color: z.exactOptional(color),
 };
 
-const point = z.strictObject({ ...objectBase, type: z.literal("point"), position: vec3 });
+const point = z.strictObject({
+  ...objectBase,
+  type: z.literal("point"),
+  position: vec3,
+  drag: z.exactOptional(z.array(id).min(1).max(3)),
+});
 
 const segment = z.strictObject({ ...objectBase, type: z.literal("segment"), from: id, to: id });
 

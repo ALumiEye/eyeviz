@@ -162,20 +162,8 @@ export class SceneGraph {
     camera: THREE.Camera,
     size: { width: number; height: number },
   ): string | null {
-    let best: { id: string; distance: number } | undefined;
-    const projected = new THREE.Vector3();
-    for (const [id, view] of this.#views) {
-      const anchor = view.anchor?.();
-      if (!anchor) continue;
-      projected.copy(anchor).project(camera);
-      const dx = ((projected.x - pointer.x) / 2) * size.width;
-      const dy = ((projected.y - pointer.y) / 2) * size.height;
-      const distance = Math.hypot(dx, dy);
-      if (distance <= PICK_RADIUS_PX && projected.z < 1 && (!best || distance < best.distance)) {
-        best = { id, distance };
-      }
-    }
-    if (best) return best.id;
+    const anchored = this.pickAnchor(pointer, camera, size);
+    if (anchored) return anchored;
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(pointer, camera);
@@ -188,6 +176,38 @@ export class SceneGraph {
       }
     }
     return null;
+  }
+
+  /**
+   * The point or label whose anchor is within the pick radius of `pointer` on screen (closest
+   * first), optionally restricted to `only`.
+   */
+  pickAnchor(
+    pointer: THREE.Vector2,
+    camera: THREE.Camera,
+    size: { width: number; height: number },
+    only?: ReadonlySet<string>,
+  ): string | null {
+    let best: { id: string; distance: number } | undefined;
+    const projected = new THREE.Vector3();
+    for (const [id, view] of this.#views) {
+      if (only && !only.has(id)) continue;
+      const anchor = view.anchor?.();
+      if (!anchor) continue;
+      projected.copy(anchor).project(camera);
+      const dx = ((projected.x - pointer.x) / 2) * size.width;
+      const dy = ((projected.y - pointer.y) / 2) * size.height;
+      const distance = Math.hypot(dx, dy);
+      if (distance <= PICK_RADIUS_PX && projected.z < 1 && (!best || distance < best.distance)) {
+        best = { id, distance };
+      }
+    }
+    return best?.id ?? null;
+  }
+
+  /** World position of a point or label (if shown). */
+  anchorOf(id: string): THREE.Vector3 | undefined {
+    return this.#views.get(id)?.anchor?.()?.clone();
   }
 
   dispose(): void {

@@ -142,6 +142,7 @@ engine.setParameter("theta", 60); // clamped to [min, max]
 engine.setParameters({ r: 2, theta: 45 }); // one update
 engine.setTime(1.5);
 engine.setStep(1); // steps: null shows the whole scene
+engine.dragPoint("P", [1, 2, 0]); // moves P's drag parameters toward the target
 const state = engine.getState(); // + state.duration, state.step, state.highlights, state.focus
 const unsubscribe = engine.subscribe((state, changed) => {
   /* changed: Set<objectId> */

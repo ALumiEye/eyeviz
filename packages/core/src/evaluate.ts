@@ -93,7 +93,7 @@ function evaluateScalar(scalar: ScalarModel, scope: ExpressionScope): number {
   return scalar.kind === "constant" ? scalar.value : scalar.expression.evaluate(scope);
 }
 
-function evaluateVec3(vec: Vec3Model, scope: ExpressionScope): NumberVec3 {
+export function evaluateVec3(vec: Vec3Model, scope: ExpressionScope): NumberVec3 {
   return Object.freeze([
     evaluateScalar(vec[0], scope),
     evaluateScalar(vec[1], scope),

@@ -79,14 +79,16 @@
       "type": "point",
       "name": "Tip of a",
       "position": ["ax", "ay", 0],
-      "visible": "showSum"
+      "visible": "showSum",
+      "drag": ["ax", "ay"]
     },
     {
       "id": "B",
       "type": "point",
       "name": "Tip of b",
       "position": ["bx", "by", 0],
-      "visible": "showSum"
+      "visible": "showSum",
+      "drag": ["bx", "by"]
     },
     {
       "id": "S",

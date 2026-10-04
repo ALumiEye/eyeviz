@@ -244,12 +244,22 @@ class Compiler {
     };
 
     switch (object.type) {
-      case "point":
-        return {
-          ...base,
-          type: "point",
-          position: this.compileVec3(object.position, `${at}.position`, dependencies),
-        };
+      case "point": {
+        const positionDependencies = new Set<string>();
+        const position = this.compileVec3(object.position, `${at}.position`, positionDependencies);
+        for (const dependency of positionDependencies) dependencies.add(dependency);
+        object.drag?.forEach((id, i) => {
+          if (!positionDependencies.has(id)) {
+            this.issues.push({
+              code: "INVALID_REFERENCE_TYPE",
+              message: `Dragging '${object.id}' cannot change '${id}': its position does not use that parameter`,
+              path: `${at}.drag[${i}]`,
+              details: { id },
+            });
+          }
+        });
+        return { ...base, type: "point", position, ...(object.drag ? { drag: object.drag } : {}) };
+      }
       case "segment":
         dependencies.add(object.from);
         dependencies.add(object.to);

@@ -35,6 +35,8 @@ interface ObjectModelBase {
 export interface PointModel extends ObjectModelBase {
   readonly type: "point";
   readonly position: Vec3Model;
+  /** Number parameters that dragging may change. Absent = not draggable. */
+  readonly drag?: readonly string[];
 }
 
 export interface SegmentModel extends ObjectModelBase {

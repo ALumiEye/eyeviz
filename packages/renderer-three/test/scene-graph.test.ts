@@ -360,6 +360,10 @@ describe("emphasis and picking", () => {
     // B is at x = 4 → NDC 0.8; a pointer 10 px away still picks it (label B shares the spot).
     expect(["B", "lB"]).toContain(graph.pick(new THREE.Vector2(0.8 + 10 / 250, 0), camera, size));
     expect(graph.pick(new THREE.Vector2(0, 0.8), camera, size)).toBeNull();
+    // Restricting to draggable points: the label at the same spot is ignored.
+    expect(graph.pickAnchor(new THREE.Vector2(0.8, 0), camera, size, new Set(["B"]))).toBe("B");
+    expect(graph.pickAnchor(new THREE.Vector2(0.8, 0), camera, size, new Set(["A"]))).toBeNull();
+    expect(graph.anchorOf("B")?.toArray()).toEqual([4, 0, 0]);
     // On the segment, away from both endpoints: picked by ray casting.
     expect(graph.pick(new THREE.Vector2(0.4, 0.01), camera, size)).toBe("AB");
   });

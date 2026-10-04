@@ -38,9 +38,11 @@ export function mount(
   const { engine: engineOptions, autoplay, ...rendererOptions } = options;
   const engine = new EyeVizEngine(spec, engineOptions);
   // Clicking an object selects it (and clicking empty space clears the selection).
+  // Dragging a point with `drag` parameters moves it (through those parameters).
   const onSelect = rendererOptions.onSelect;
   const renderer: ThreeRenderer = new ThreeRenderer(container, {
     ...rendererOptions,
+    onDrag: (id, target) => engine.dragPoint(id, target),
     onSelect: (id) => {
       renderer.setSelection(id);
       onSelect?.(id);

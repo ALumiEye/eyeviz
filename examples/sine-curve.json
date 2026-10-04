@@ -2,7 +2,7 @@
   "version": "0.1",
   "metadata": {
     "title": "Sine wave",
-    "description": "The graph of y = a·sin(k·x + φ) for x from −2π to 2π, with a point P on the curve at x = x0.",
+    "description": "The graph of y = a·sin(k·x + φ) for x from −2π to 2π, with a point P on the curve at x = x0. Drag P along the wave.",
     "lang": "en"
   },
   "scene": {
@@ -62,7 +62,8 @@
       "id": "P",
       "type": "point",
       "name": "Point P on the wave",
-      "position": ["x0", "a*sin(k*x0 + phi)", 0]
+      "position": ["x0", "a*sin(k*x0 + phi)", 0],
+      "drag": ["x0"]
     },
     {
       "id": "P0",

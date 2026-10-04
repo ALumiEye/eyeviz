@@ -28,6 +28,8 @@ export interface EyeVizSceneProps extends ThreeRendererOptions {
   readonly selected?: string | null;
   /** Called when the user clicks or taps an object (its ID) or empty space (`null`). */
   readonly onSelect?: (id: string | null) => void;
+  /** Let users drag points that declare `drag` parameters. Default `true`. */
+  readonly draggable?: boolean;
   readonly className?: string;
   /** Default size: full width with a 16 / 9 aspect ratio. */
   readonly style?: CSSProperties;
@@ -79,8 +81,12 @@ export function EyeVizScene(props: EyeVizSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Latest callback without recreating the renderer (and its WebGL context) when it changes.
   const onSelectRef = useRef(props.onSelect);
+  const engineRef = useRef(engine);
+  const draggableRef = useRef(props.draggable ?? true);
   useEffect(() => {
     onSelectRef.current = props.onSelect;
+    engineRef.current = engine;
+    draggableRef.current = props.draggable ?? true;
   });
   const [renderer, setRenderer] = useState<ThreeRenderer | null>(null);
 
@@ -105,6 +111,10 @@ export function EyeVizScene(props: EyeVizSceneProps) {
         instance = new ThreeRenderer(container, {
           ...options,
           onSelect: (id) => onSelectRef.current?.(id),
+          onDrag: (id, target) => {
+            const current = engineRef.current;
+            if (draggableRef.current && current?.isDraggable(id)) current.dragPoint(id, target);
+          },
         });
         setRenderer(instance);
       });
