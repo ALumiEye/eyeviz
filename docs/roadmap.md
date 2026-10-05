@@ -45,7 +45,8 @@ Before the first npm publish:
 
 - [x] Replace the math.js parser with a hand-written one: runtime ≈127 kB → ≈37 kB gzip
       ([ADR-0013](adr/0013-hand-written-expression-parser.md))
-- [ ] API report (API Extractor) and bundle-size budget in CI
+- [x] Bundle-size budget in CI (`pnpm check:size`, gzip per public entry point)
+- [ ] API report (API Extractor)
 - [ ] Automated browser test for the Three.js renderer lifecycle
 
 ## Phase 2 — Mathematical primitives

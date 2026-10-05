@@ -53,6 +53,9 @@ jobs:
       - name: Package exports (publint + attw)
         run: pnpm check:packages
 
+      - name: Bundle-size budget
+        run: pnpm check:size
+
       - name: Dependency licenses
         run: pnpm check:licenses
 

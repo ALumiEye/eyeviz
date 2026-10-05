@@ -57,6 +57,20 @@ export interface EyeVizSceneProps extends ThreeRendererOptions {
   readonly style?: CSSProperties;
 }
 
+/** Retries of a failed renderer download, after these delays (ms). */
+const RETRY_DELAYS = [1000, 3000, 9000];
+
+const fallbackText: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  margin: 0,
+  padding: "1em",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+};
+
 const visuallyHidden: CSSProperties = {
   position: "absolute",
   width: 1,
@@ -79,6 +93,10 @@ const visuallyHidden: CSSProperties = {
  * Server-side rendering outputs only the container and the scene's title/description as text;
  * Three.js runs exclusively in the browser. If the spec becomes invalid, the last valid scene
  * stays on screen.
+ *
+ * If the renderer cannot start — its download keeps failing (retried with backoff and when the
+ * browser comes back online) or WebGL is unavailable — the scene's title and description are
+ * shown as text instead, and the container gets `data-eyeviz-error="renderer"` for styling.
  */
 export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
   const {
@@ -113,6 +131,7 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
     onDragPointRef.current = props.onDragPoint;
   });
   const [renderer, setRenderer] = useState<ThreeRenderer | null>(null);
+  const [failed, setFailed] = useState(false);
 
   // Mount the renderer once per set of renderer options.
   useEffect(() => {
@@ -121,32 +140,73 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
     let cancelled = false;
     let instance: ThreeRenderer | undefined;
     let observer: IntersectionObserver | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    let waitingForNetwork = false;
 
-    const start = () => {
-      void import("@alumieye/eyeviz-renderer-three").then(({ ThreeRenderer }) => {
-        if (cancelled) return;
-        const options: ThreeRendererOptions = {
-          ...(theme !== undefined ? { theme } : {}),
-          ...(axes !== undefined ? { axes } : {}),
-          ...(grid !== undefined ? { grid } : {}),
-          ...(background !== undefined ? { background } : {}),
-          ...(maxPixelRatio !== undefined ? { maxPixelRatio } : {}),
-        };
-        instance = new ThreeRenderer(container, {
-          ...options,
-          onSelect: (id) => onSelectRef.current?.(id),
-          onDrag: (id, target) => {
-            if (!draggableRef.current) return;
-            const custom = onDragPointRef.current;
-            if (custom) return custom(id, target);
-            const current = engineRef.current;
-            if (current?.isDraggable(id)) current.dragPoint(id, target);
-          },
-        });
-        setRenderer(instance);
-      });
+    const giveUp = (error: unknown) => {
+      console.error("[EyeViz] The 3D renderer could not start; showing the scene as text.", error);
+      setFailed(true);
+    };
+    // A download that failed while offline is retried when the browser is back online.
+    const onOnline = () => {
+      if (!waitingForNetwork) return;
+      waitingForNetwork = false;
+      attempt = 0;
+      setFailed(false);
+      start();
     };
 
+    const start = () => {
+      import("@alumieye/eyeviz-renderer-three").then(
+        ({ ThreeRenderer }) => {
+          if (cancelled) return;
+          const options: ThreeRendererOptions = {
+            ...(theme !== undefined ? { theme } : {}),
+            ...(axes !== undefined ? { axes } : {}),
+            ...(grid !== undefined ? { grid } : {}),
+            ...(background !== undefined ? { background } : {}),
+            ...(maxPixelRatio !== undefined ? { maxPixelRatio } : {}),
+          };
+          try {
+            instance = createRenderer(ThreeRenderer, options);
+          } catch (error) {
+            // No WebGL (old device, disabled GPU): retrying will not help.
+            return giveUp(error);
+          }
+          setFailed(false);
+          setRenderer(instance);
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          const delay = RETRY_DELAYS[attempt++];
+          if (delay !== undefined) {
+            retry = setTimeout(start, delay);
+            return;
+          }
+          waitingForNetwork = true;
+          giveUp(error);
+        },
+      );
+    };
+
+    const createRenderer = (
+      Renderer: typeof ThreeRenderer,
+      options: ThreeRendererOptions,
+    ): ThreeRenderer =>
+      new Renderer(container, {
+        ...options,
+        onSelect: (id) => onSelectRef.current?.(id),
+        onDrag: (id, target) => {
+          if (!draggableRef.current) return;
+          const custom = onDragPointRef.current;
+          if (custom) return custom(id, target);
+          const current = engineRef.current;
+          if (current?.isDraggable(id)) current.dragPoint(id, target);
+        },
+      });
+
+    window.addEventListener("online", onOnline);
     if (lazy && typeof IntersectionObserver === "function") {
       observer = new IntersectionObserver(
         (entries) => {
@@ -164,6 +224,8 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
 
     return () => {
       cancelled = true;
+      clearTimeout(retry);
+      window.removeEventListener("online", onOnline);
       observer?.disconnect();
       instance?.dispose();
       setRenderer(null);
@@ -203,11 +265,12 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
       role="img"
       aria-label={label}
       lang={metadata?.lang}
+      data-eyeviz-error={failed ? "renderer" : undefined}
       style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", ...style }}
     >
       <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
       {metadata?.title || metadata?.description ? (
-        <p style={visuallyHidden}>
+        <p style={failed ? fallbackText : visuallyHidden}>
           {metadata.title}
           {metadata.title && metadata.description ? ". " : ""}
           {metadata.description}

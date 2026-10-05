@@ -21,7 +21,8 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:packages": "pnpm -r --filter \"./packages/*\" check:package",
-    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm check:boundaries && pnpm test && pnpm build && pnpm check:packages && pnpm check:licenses && pnpm build:playground",
+    "check:size": "node scripts/check-size.mjs",
+    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm check:boundaries && pnpm test && pnpm build && pnpm check:packages && pnpm check:size && pnpm check:licenses && pnpm build:playground",
     "changeset": "changeset"
   },
   "devDependencies": {
