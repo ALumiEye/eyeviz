@@ -7,7 +7,22 @@ export interface GuideOptions {
   readonly axes: boolean;
   readonly grid: boolean;
   readonly dimension: "2d" | "3d";
+  /**
+   * The area to cover and the tick step, instead of deriving them from `bounds`. 2D views use it
+   * so that the grid and the numbers follow zoom and pan.
+   */
+  readonly region?: GuideRegion;
 }
+
+/** A box to draw guides in (z is ignored in 2D) and the spacing of grid lines and ticks. */
+export interface GuideRegion {
+  readonly min: readonly [number, number, number];
+  readonly max: readonly [number, number, number];
+  readonly step: number;
+}
+
+/** At most this many grid lines per direction; a denser grid would be noise. */
+const MAX_LINES = 400;
 
 /** Half-length of axes and grid: covers the scene with some margin, in whole tick steps. */
 export function guideExtent(bounds: Bounds, ticksPerHalfAxis = 5): number {
@@ -24,33 +39,65 @@ export function guideExtent(bounds: Bounds, ticksPerHalfAxis = 5): number {
 /** Fewer numbers in 3D, where tick labels of three axes overlap in perspective. */
 const ticksPerHalfAxis = (dimension: "2d" | "3d") => (dimension === "2d" ? 5 : 3);
 
+/** The default region: a cube around the origin that covers `bounds`. */
+function regionFor(bounds: Bounds, dimension: "2d" | "3d"): GuideRegion {
+  const extent = guideExtent(bounds, ticksPerHalfAxis(dimension));
+  return {
+    min: [-extent, -extent, -extent],
+    max: [extent, extent, extent],
+    step: niceStep(extent, ticksPerHalfAxis(dimension)),
+  };
+}
+
 /**
- * Builds coordinate guides: a grid on z = 0, and axes with ticks, numbers and axis names.
- * In 2D only x and y are drawn. Everything is added to `group`; `disposeGuides` releases it.
+ * Builds coordinate guides: a grid on z = 0, and axes through the origin with ticks, numbers
+ * and axis names. In 2D only x and y are drawn. Everything is added to `group`;
+ * `disposeGuides` releases it. Returns the axis-name labels (to keep them in view).
  */
 export function buildGuides(
   group: THREE.Group,
   bounds: Bounds,
   palette: Palette,
   options: GuideOptions,
-): void {
-  const extent = guideExtent(bounds, ticksPerHalfAxis(options.dimension));
-  const step = niceStep(extent, ticksPerHalfAxis(options.dimension));
+): THREE.Object3D[] {
+  const region = options.region ?? regionFor(bounds, options.dimension);
+  const { min, max } = region;
+  // Never draw more lines than can be seen: widen the step if needed.
+  let step = region.step;
+  while (Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]) / step > MAX_LINES) step *= 2;
+  const multiples = (from: number, to: number) => {
+    const values: number[] = [];
+    for (let k = Math.ceil(from / step); k * step <= to + step * 1e-9; k++) values.push(k * step);
+    return values;
+  };
 
   if (options.grid) {
-    const divisions = Math.min(200, Math.round((2 * extent) / step));
-    const grid = new THREE.GridHelper(2 * extent, divisions, palette.gridCenter, palette.grid);
-    grid.rotation.x = Math.PI / 2; // GridHelper lies in x–z; EyeViz's ground plane is x–y
-    grid.position.z = -extent * 1e-4; // keep the grid just behind objects drawn on z = 0
-    group.add(grid);
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const minor = new THREE.Color(palette.grid);
+    const major = new THREE.Color(palette.gridCenter);
+    // Just behind objects drawn on z = 0.
+    const z = -Math.max(max[0] - min[0], max[1] - min[1]) * 1e-5;
+    const line = (a: number[], b: number[], color: THREE.Color) => {
+      positions.push(...a, ...b);
+      colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+    };
+    for (const x of multiples(min[0], max[0])) {
+      line([x, min[1], z], [x, max[1], z], Math.abs(x) < step / 2 ? major : minor);
+    }
+    for (const y of multiples(min[1], max[1])) {
+      line([min[0], y, z], [max[0], y, z], Math.abs(y) < step / 2 ? major : minor);
+    }
+    group.add(lineSegments(positions, colors));
   }
 
-  if (!options.axes) return;
+  if (!options.axes) return [];
 
   const axisCount = options.dimension === "2d" ? 2 : 3;
-  const tickSize = extent * 0.012;
+  const tickSize = step * 0.06;
   const positions: number[] = [];
   const colors: number[] = [];
+  const names: THREE.Object3D[] = [];
   const push = (from: number[], to: number[], color: THREE.Color) => {
     positions.push(...from, ...to);
     colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
@@ -63,18 +110,17 @@ export function buildGuides(
       p[axis] = (p[axis] as number) + value;
       return p;
     };
-    push(at(-extent), at(extent), color);
+    push(at(min[axis] as number), at(max[axis] as number), color);
 
     // Ticks perpendicular to the axis, in the plane that faces the viewer best.
     const across = axis === 0 ? 1 : 0;
     const tickOffset = [0, 0, 0];
     tickOffset[across] = tickSize;
     const tickOffsetNeg = tickOffset.map((v) => -v);
-    for (let value = -extent; value <= extent + step / 2; value += step) {
-      const rounded = Math.round(value / step) * step;
-      if (rounded === 0) continue;
-      push(at(rounded, tickOffsetNeg), at(rounded, tickOffset), color);
-      const label = createLabel(formatTick(rounded, step), {
+    for (const value of multiples(min[axis] as number, max[axis] as number)) {
+      if (Math.abs(value) < step / 2) continue;
+      push(at(value, tickOffsetNeg), at(value, tickOffset), color);
+      const label = createLabel(formatTick(value, step), {
         color: palette.tickLabel,
         halo: palette.labelHalo,
         size: 11,
@@ -82,7 +128,7 @@ export function buildGuides(
       });
       label.position.set(
         ...(at(
-          rounded,
+          value,
           tickOffsetNeg.map((v) => v * 2),
         ) as [number, number, number]),
       );
@@ -96,8 +142,10 @@ export function buildGuides(
       size: 14,
       weight: 600,
     });
-    name.position.set(...(at(extent) as [number, number, number]));
+    name.position.set(...(at(max[axis] as number) as [number, number, number]));
+    name.userData.axis = axis;
     group.add(name);
+    names.push(name);
   }
 
   const origin = createLabel("O", {
@@ -109,10 +157,15 @@ export function buildGuides(
   origin.center.set(1, 0);
   group.add(origin);
 
+  group.add(lineSegments(positions, colors));
+  return names;
+}
+
+function lineSegments(positions: number[], colors: number[]): THREE.LineSegments {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-  group.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true })));
+  return new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true }));
 }
 
 export function disposeGuides(group: THREE.Group): void {

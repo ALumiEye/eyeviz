@@ -53,23 +53,25 @@ the renderer's whole lifetime.
 
 ## Three.js renderer
 
-| State      | Three.js representation                                                                                         |
-| ---------- | --------------------------------------------------------------------------------------------------------------- |
-| `point`    | Small sphere (shared geometry)                                                                                  |
-| `segment`  | `Line2` (screen-space width; WebGL `LineBasicMaterial` is always 1px)                                           |
-| `vector`   | Arrow: cylinder shaft + cone head (shared geometries), hidden when zero-length                                  |
-| `plane`    | Translucent square patch with an outline, oriented along the normal                                             |
-| `curve`    | One `Line2` per polyline                                                                                        |
-| `implicit` | Like `curve`: one `Line2` per polyline                                                                          |
-| `surface`  | Indexed mesh with smooth normals over the defined grid cells, plus faint grid lines                             |
-| `label`    | DOM text in a `CSS2DRenderer` overlay ([ADR-0014](adr/0014-labels-as-dom-text.md))                              |
-| axes/grid  | From `scene.axes` / `scene.grid` (renderer options override): axes with ticks, numbers and names; grid on z = 0 |
+| State      | Three.js representation                                                                                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `point`    | Small sphere (shared geometry)                                                                                                                                                                     |
+| `segment`  | `Line2` (screen-space width; WebGL `LineBasicMaterial` is always 1px)                                                                                                                              |
+| `vector`   | Arrow: cylinder shaft + cone head (shared geometries), hidden when zero-length                                                                                                                     |
+| `plane`    | Translucent square patch with an outline, oriented along the normal                                                                                                                                |
+| `curve`    | One `Line2` per polyline                                                                                                                                                                           |
+| `implicit` | Like `curve`: one `Line2` per polyline                                                                                                                                                             |
+| `surface`  | Indexed mesh with smooth normals over the defined grid cells, plus faint grid lines                                                                                                                |
+| `label`    | DOM text in a `CSS2DRenderer` overlay ([ADR-0014](adr/0014-labels-as-dom-text.md))                                                                                                                 |
+| axes/grid  | From `scene.axes` / `scene.grid` (renderer options override): axes with ticks, numbers and names; grid on z = 0. In 2D they follow zoom and pan (tick step for the visible area, like graph paper) |
 
 - **Coordinates:** EyeViz is z-up. The 3D camera sets `camera.up = (0, 0, 1)` and keeps world
   coordinates unchanged, so no per-point conversion is needed.
 - **2D scenes** (`scene.dimension: "2d"`) use an orthographic camera looking down at the x–y
   plane, framing the drawing's bounding rectangle. Rotation is disabled; dragging pans and the
   wheel/pinch zooms. Only the x and y axes are drawn.
+- **Framing** ignores coordinates beyond ±`VIEW_LIMIT` (10⁴): a graph like y = eˣ on
+  [−50, 50] is framed as if it stopped there, so the rest of the scene stays visible.
 - **Sizes:** world-space sizes (point radius, arrow heads, default plane extent) scale with
   the scene's bounding sphere, so small and large scenes read the same.
 - **Render on demand:** a frame is drawn only when state, camera or size changes. There is no

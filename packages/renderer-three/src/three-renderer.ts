@@ -3,8 +3,8 @@ import type { NumberVec3 } from "@alumieye/eyeviz-spec";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
-import { buildGuides, disposeGuides } from "./axes";
-import { computeBounds, defaultCameraPosition, type Bounds } from "./bounds";
+import { buildGuides, disposeGuides, type GuideRegion } from "./axes";
+import { computeBounds, defaultCameraPosition, niceStep, type Bounds } from "./bounds";
 import { prefersReducedMotion } from "./browser";
 import { SceneGraph } from "./scene-graph";
 import { PALETTES, resolveTheme, type Palette, type ThemeOption } from "./theme";
@@ -79,6 +79,9 @@ export class ThreeRenderer implements SceneRenderer {
   #framed: Bounds = { center: [0, 0, 0], radius: 1 };
   /** Size reference of points and arrows (see SceneGraph); follows the framed view. */
   #scale = 1;
+  /** In 2D: the area the current guides cover; they are rebuilt when the view leaves it. */
+  #guideRegion: GuideRegion | undefined;
+  #axisNames: THREE.Object3D[] = [];
   #dimension: Dimension = "3d";
   #halfHeight = 1;
   #cameraKey: string | undefined;
@@ -305,6 +308,9 @@ export class ThreeRenderer implements SceneRenderer {
       // Frame the bounding rectangle of the drawing (with a margin), not a bounding circle.
       this.#halfHeight = this.#halfHeightFor(bounds, target);
       camera.position.set(target[0], target[1], bounds.radius * 10);
+      // Depth range follows the scene, so large scenes are never clipped away.
+      camera.far = bounds.radius * 20 + 1e5;
+      camera.near = -camera.far;
       camera.zoom = 1;
       this.#controls.target.set(target[0], target[1], 0);
       this.#updateOrthographic();
@@ -491,11 +497,62 @@ export class ThreeRenderer implements SceneRenderer {
   #buildGuides(): void {
     disposeGuides(this.#guides);
     const scene = this.#model?.scene;
-    buildGuides(this.#guides, union(this.#bounds, this.#framed), this.#palette, {
+    // 2D guides cover the visible area (and some around it) with a step for the current zoom,
+    // like graph paper; 3D guides cover the scene.
+    this.#guideRegion = this.#dimension === "2d" ? this.#viewRegion() : undefined;
+    this.#axisNames = buildGuides(this.#guides, union(this.#bounds, this.#framed), this.#palette, {
       axes: this.#options.axes ?? scene?.axes ?? true,
       grid: this.#options.grid ?? scene?.grid ?? true,
       dimension: this.#dimension,
+      ...(this.#guideRegion ? { region: this.#guideRegion } : {}),
     });
+    this.#placeAxisNames();
+  }
+
+  /** The visible rectangle of the 2D view. */
+  #visible(): { cx: number; cy: number; halfWidth: number; halfHeight: number } {
+    const { width, height } = this.#size();
+    const aspect = width > 0 && height > 0 ? width / height : 1;
+    const halfHeight = this.#halfHeight / this.#orthographic.zoom;
+    const { x: cx, y: cy } = this.#controls.target;
+    return { cx, cy, halfWidth: halfHeight * aspect, halfHeight };
+  }
+
+  /** Guides for the 2D view: three times the visible area, about 5 ticks per half height. */
+  #viewRegion(): GuideRegion {
+    const { cx, cy, halfWidth, halfHeight } = this.#visible();
+    const step = niceStep(halfHeight, 5);
+    const snap = (v: number, round: (x: number) => number) => round(v / step) * step;
+    return {
+      min: [snap(cx - 3 * halfWidth, Math.floor), snap(cy - 3 * halfHeight, Math.floor), 0],
+      max: [snap(cx + 3 * halfWidth, Math.ceil), snap(cy + 3 * halfHeight, Math.ceil), 0],
+      step,
+    };
+  }
+
+  /** In 2D, rebuilds the guides when zoom changed the tick step or the view left them. */
+  #followView(): void {
+    const region = this.#guideRegion;
+    if (this.#dimension !== "2d" || !region) return;
+    const { cx, cy, halfWidth, halfHeight } = this.#visible();
+    const outside =
+      cx - halfWidth < region.min[0] ||
+      cx + halfWidth > region.max[0] ||
+      cy - halfHeight < region.min[1] ||
+      cy + halfHeight > region.max[1];
+    if (outside || niceStep(halfHeight, 5) !== region.step) this.#buildGuides();
+    else this.#placeAxisNames();
+  }
+
+  /** In 2D, axis names sit at the visible ends of the axes (wherever the view is). */
+  #placeAxisNames(): void {
+    if (this.#dimension !== "2d") return;
+    const { cx, cy, halfWidth, halfHeight } = this.#visible();
+    const margin = halfHeight * 0.06;
+    for (const name of this.#axisNames) {
+      if (name.userData.axis === 0) name.position.set(cx + halfWidth - margin, 0, 0);
+      else name.position.set(0, cy + halfHeight - margin, 0);
+    }
   }
 
   #setPalette(palette: Palette): void {
@@ -535,6 +592,7 @@ export class ThreeRenderer implements SceneRenderer {
       this.#frame = 0;
       const tweening = this.#stepTween(performance.now());
       const moving = this.#controls.update() || tweening; // damping still settling, or a focus move
+      this.#followView();
       this.#renderer.render(this.#scene, this.#camera);
       this.#labels.render(this.#scene, this.#camera);
       if (moving) this.#requestRender();

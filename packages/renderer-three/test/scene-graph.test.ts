@@ -12,6 +12,7 @@ import {
   PALETTES,
   resolveTheme,
   SceneGraph,
+  VIEW_LIMIT,
 } from "../src/index";
 
 const spec = {
@@ -203,6 +204,18 @@ describe("bounds and camera", () => {
     expect(bounds.min?.[1]).toBeCloseTo(-8, 0);
   });
 
+  it("frames a curve that shoots off to huge values as reaching VIEW_LIMIT", () => {
+    const engine = new EyeVizEngine({
+      version: "0.1",
+      objects: [
+        { id: "g", type: "curve", variable: "x", domain: [-50, 50], position: ["x", "e^x", 0] },
+      ],
+    });
+    const bounds = computeBounds(engine.getState());
+    expect(bounds.max?.[1]).toBe(VIEW_LIMIT);
+    expect(bounds.radius).toBeLessThan(VIEW_LIMIT);
+  });
+
   it("frames ±5 for an empty scene, so new objects are on screen", () => {
     const engine = new EyeVizEngine({ version: "0.1", objects: [] });
     expect(computeBounds(engine.getState())).toMatchObject({
@@ -333,6 +346,35 @@ describe("guides (axes, ticks, grid)", () => {
     };
     expect(count("3d").names).toEqual(expect.arrayContaining(["x", "y", "z"]));
     expect(count("2d").names).not.toContain("z");
+  });
+
+  it("covers a given region with its step (2D views follow zoom and pan)", () => {
+    const group = new THREE.Group();
+    const names = buildGuides(group, { center: [0, 0, 0], radius: 5 }, PALETTES.light, {
+      axes: true,
+      grid: true,
+      dimension: "2d",
+      region: { min: [4800, 4900, 0], max: [5200, 5100, 0], step: 20 },
+    });
+    const ticks = group.children
+      .filter((c) => "element" in c)
+      .map((c) => (c as unknown as { element: HTMLElement }).element.textContent);
+    expect(ticks).toEqual(expect.arrayContaining(["4820", "5100", "4900"]));
+    expect(names).toHaveLength(2);
+    disposeGuides(group);
+  });
+
+  it("never draws more than a few hundred grid lines", () => {
+    const group = new THREE.Group();
+    buildGuides(group, { center: [0, 0, 0], radius: 5 }, PALETTES.light, {
+      axes: false,
+      grid: true,
+      dimension: "2d",
+      region: { min: [-1e6, -1e6, 0], max: [1e6, 1e6, 0], step: 1 },
+    });
+    const grid = group.children[0] as THREE.LineSegments;
+    expect(grid.geometry.getAttribute("position").count / 2).toBeLessThanOrEqual(2 * 401);
+    disposeGuides(group);
   });
 
   it("can draw nothing", () => {

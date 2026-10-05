@@ -11,6 +11,14 @@ export interface Bounds {
 }
 
 /**
+ * Coordinates beyond ±this are framed as if they stopped here. A graph like y = eˣ on
+ * [−50, 50] reaches 10²¹; framing all of it would show nothing else.
+ */
+export const VIEW_LIMIT = 1e4;
+
+const clampView = (v: number) => Math.max(-VIEW_LIMIT, Math.min(VIEW_LIMIT, v));
+
+/**
  * Bounding box and sphere of the valid objects in the state — all of them plus the origin, or
  * only the objects in `only` (used to focus the camera on a step's objects).
  */
@@ -19,6 +27,9 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
   const max = only ? [-Infinity, -Infinity, -Infinity] : [0, 0, 0];
   const include = (x: number, y: number, z: number) => {
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
+    x = clampView(x);
+    y = clampView(y);
+    z = clampView(z);
     min[0] = Math.min(min[0] as number, x);
     min[1] = Math.min(min[1] as number, y);
     min[2] = Math.min(min[2] as number, z);
