@@ -15,6 +15,7 @@ import {
   SUPPORTED_FUNCTIONS,
 } from "@alumieye/eyeviz-math";
 import {
+  DEFAULT_IMPLICIT_VARIABLES,
   validateSpec,
   type Anchor,
   type EyeVizIssue,
@@ -222,6 +223,9 @@ class Compiler {
       if (o.type === "surface") {
         o.variables.forEach((v, j) => check(v, `objects[${i}].variables[${j}]`));
       }
+      if (o.type === "implicit" && o.variables) {
+        o.variables.forEach((v, j) => check(v, `objects[${i}].variables[${j}]`));
+      }
     });
   }
 
@@ -317,6 +321,28 @@ class Compiler {
           variables: [u, v],
           domain: [range(u), range(v)],
           position: this.compileVec3(object.position, `${at}.position`, dependencies, [u, v]),
+        };
+      }
+      case "implicit": {
+        const [u, v] = object.variables ?? DEFAULT_IMPLICIT_VARIABLES;
+        const range = (variable: string) => {
+          const [start, end] = object.domain[variable] as readonly [Scalar, Scalar];
+          return [
+            this.compileScalar(start, `${at}.domain.${variable}[0]`, dependencies),
+            this.compileScalar(end, `${at}.domain.${variable}[1]`, dependencies),
+          ] as const;
+        };
+        // validateSpec guarantees exactly one "=".
+        const [left, right] = object.equation.split("=") as [string, string];
+        const side = (source: string) =>
+          this.compileScalar(source.trim(), `${at}.equation`, dependencies, [u, v]);
+        return {
+          ...base,
+          type: "implicit",
+          variables: [u, v],
+          domain: [range(u), range(v)],
+          left: side(left),
+          right: side(right),
         };
       }
       case "label":

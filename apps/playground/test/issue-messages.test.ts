@@ -22,6 +22,13 @@ const curve = (y: unknown, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
+const implicit = (equation: string) => ({
+  id: "c",
+  type: "implicit",
+  equation,
+  domain: { x: [-2, 2], y: [-2, 2] },
+});
+
 /** Messages of every issue for a spec: validation first, then compilation and evaluation. */
 function messages(spec: unknown): string[] {
   const validation = validateSpec(spec);
@@ -71,6 +78,14 @@ const SCENES: Record<string, unknown> = {
   "two formulas": scene({ objects: [curve("x; 2")] }),
   "undefined curve": scene({ objects: [curve("sqrt(-1 - x^2)")] }),
   "non-finite point": scene({ objects: [point("A", [0, "log(0)", 0])] }),
+  "equation without '='": scene({ objects: [implicit("x^2 + y^2")] }),
+  "equation without a domain for y": scene({
+    objects: [{ ...implicit("x^2 + y^2 = 1"), domain: { x: [-1, 1] } }],
+  }),
+  "equation with the same variables": scene({
+    objects: [{ ...implicit("x^2 = 1"), variables: ["x", "x"] }],
+  }),
+  "equation undefined everywhere": scene({ objects: [implicit("sqrt(-1 - x^2) = y")] }),
   "collinear plane": scene({
     objects: [
       point("A"),
@@ -109,11 +124,14 @@ describe("Vietnamese issue messages", () => {
     if (!result.ok) expect(hasVietnamese(result.error.message), result.error.message).toBe(true);
   });
 
-  it.each(["sec x", "sin", "x +"])("translates the quick graph message for %s", (input) => {
-    const result = parseQuickFormula(input, []);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(hasVietnamese(result.message), result.message).toBe(true);
-  });
+  it.each(["sec x", "sin", "x +", "x = y = 1"])(
+    "translates the quick graph message for %s",
+    (input) => {
+      const result = parseQuickFormula(input, []);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(hasVietnamese(result.message), result.message).toBe(true);
+    },
+  );
 
   it("keeps the details of a message", () => {
     expect(toVietnamese("Unknown symbol 'k' in expression \"k*x\". Did you mean 'a'?")).toBe(

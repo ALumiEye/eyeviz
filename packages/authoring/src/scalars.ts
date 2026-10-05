@@ -43,18 +43,28 @@ export function mapObjectExpressions(object: SceneObjectSpec, fn: ScalarMap): Sc
     case "surface":
       return {
         ...object,
-        domain: Object.fromEntries(
-          Object.entries(object.domain).map(([k, [a, b]]) => [
-            k,
-            [mapScalar(a, fn), mapScalar(b, fn)] as const,
-          ]),
-        ),
+        domain: mapDomain(object.domain, fn),
         position: mapVec3(object.position, fn),
+      };
+    case "implicit":
+      return {
+        ...object,
+        domain: mapDomain(object.domain, fn),
+        // Renaming works on the whole equation: `=` is left alone.
+        equation: fn(object.equation),
       };
     case "label":
       return { ...object, at: mapAnchor(object.at, fn) };
   }
 }
+
+const mapDomain = (
+  domain: Readonly<Record<string, readonly [Scalar, Scalar]>>,
+  fn: ScalarMap,
+): Record<string, readonly [Scalar, Scalar]> =>
+  Object.fromEntries(
+    Object.entries(domain).map(([k, [a, b]]) => [k, [mapScalar(a, fn), mapScalar(b, fn)] as const]),
+  );
 
 /** Every expression string in the object. */
 export function objectExpressions(object: SceneObjectSpec): string[] {

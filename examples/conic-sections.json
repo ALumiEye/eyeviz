@@ -1,0 +1,57 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "Conic sections",
+    "description": "The ellipse x²/a² + y²/b² = 1 and the hyperbola x²/a² − y²/b² = 1 drawn from their equations. F1 and F2 are the foci of the ellipse at (±c, 0) with c² = a² − b². Change a and b with the sliders.",
+    "lang": "en"
+  },
+  "scene": { "dimension": "2d" },
+  "parameters": [
+    {
+      "id": "a",
+      "value": 4,
+      "min": 1,
+      "max": 6,
+      "step": 0.1,
+      "label": "Semi-axis a",
+      "control": "slider"
+    },
+    {
+      "id": "b",
+      "value": 2.5,
+      "min": 1,
+      "max": 6,
+      "step": 0.1,
+      "label": "Semi-axis b",
+      "control": "slider"
+    },
+    { "id": "showHyperbola", "value": false, "label": "Show the hyperbola", "control": "toggle" }
+  ],
+  "objects": [
+    {
+      "id": "ellipse",
+      "type": "implicit",
+      "name": "Ellipse",
+      "equation": "x^2/a^2 + y^2/b^2 = 1",
+      "domain": { "x": [-7, 7], "y": [-7, 7] }
+    },
+    {
+      "id": "hyperbola",
+      "type": "implicit",
+      "name": "Hyperbola",
+      "equation": "x^2/a^2 - y^2/b^2 = 1",
+      "domain": { "x": [-7, 7], "y": [-7, 7] },
+      "visible": "showHyperbola",
+      "color": "#e8590c"
+    },
+    {
+      "id": "F1",
+      "type": "point",
+      "name": "Focus F1",
+      "position": ["-sqrt(abs(a^2 - b^2))", 0, 0]
+    },
+    { "id": "F2", "type": "point", "name": "Focus F2", "position": ["sqrt(abs(a^2 - b^2))", 0, 0] },
+    { "id": "lF1", "type": "label", "text": "F1", "at": "F1" },
+    { "id": "lF2", "type": "label", "text": "F2", "at": "F2" }
+  ]
+}

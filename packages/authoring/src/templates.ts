@@ -76,6 +76,16 @@ export function createObject(spec: SceneSpec, type: NewItemKind): SceneObjectSpe
         position: [x, y, `(${x}^2 - ${y}^2)/4`],
       };
     }
+    case "implicit": {
+      const [x, y] = [variable("x", "u"), variable("y", "v")];
+      return {
+        id: uniqueId(spec, "conic"),
+        type: "implicit",
+        equation: `${x}^2/9 + ${y}^2/4 = 1`,
+        ...(x !== "x" || y !== "y" ? { variables: [x, y] as [string, string] } : {}),
+        domain: { [x]: [-5, 5], [y]: [-5, 5] },
+      };
+    }
     case "label":
       return {
         id: uniqueId(spec, "label"),

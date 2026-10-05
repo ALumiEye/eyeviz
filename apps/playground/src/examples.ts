@@ -33,6 +33,7 @@ function rank(id: string): number {
     "points-segments",
     "unit-circle",
     "sine-curve",
+    "conic-sections",
     "vectors",
     "projectile",
     "harmonic-oscillator",

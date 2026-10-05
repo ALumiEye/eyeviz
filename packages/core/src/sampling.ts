@@ -204,3 +204,163 @@ export function sampleSurface(
   }
   return { rows: n, columns: n, positions, finiteCount };
 }
+
+/** Returns `F(x, y)`; the implicit curve is where `F = 0`. */
+export type ImplicitFunction = (x: number, y: number) => number;
+
+/**
+ * A crossing is kept only if `F` at the interpolated point is at most this fraction of the
+ * larger endpoint value. Across a pole (`y = 1/x` changes sign at x = 0 without a root) the
+ * value there is huge, so no false segment is drawn.
+ */
+const ROOT_TOLERANCE = 0.5;
+
+/**
+ * Traces the curve `F(x, y) = 0` with marching squares on a uniform `samples × samples` grid
+ * and returns it as polylines in the plane z = 0 (interleaved `x, y, z`), joined across cells.
+ * Saddle cells are resolved with the value at the cell centre. Deterministic.
+ *
+ * Only sign changes are found: a curve that touches zero without crossing it (`x^2 + y^2 = 0`,
+ * `(x - y)^2 = 0`) is not drawn. Cells touching an undefined value are skipped.
+ */
+export function sampleImplicit(
+  fn: ImplicitFunction,
+  [xStart, xEnd]: readonly [number, number],
+  [yStart, yEnd]: readonly [number, number],
+  samples: number,
+): { polylines: Float64Array[]; finiteCount: number } {
+  const n = Math.max(2, Math.floor(samples));
+  const xs = new Float64Array(n);
+  const ys = new Float64Array(n);
+  for (let k = 0; k < n; k++) {
+    xs[k] = k === n - 1 ? xEnd : xStart + ((xEnd - xStart) * k) / (n - 1);
+    ys[k] = k === n - 1 ? yEnd : yStart + ((yEnd - yStart) * k) / (n - 1);
+  }
+  // values[i * n + j] = F(xs[j], ys[i]).
+  const values = new Float64Array(n * n);
+  let finiteCount = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const value = fn(xs[j] as number, ys[i] as number);
+      values[i * n + j] = value;
+      if (Number.isFinite(value)) finiteCount++;
+    }
+  }
+
+  // Crossing points, one per grid edge at most, shared by the two cells beside the edge.
+  // Horizontal edge (i, j)–(i, j+1) has key i*(n-1)+j; vertical edge (i, j)–(i+1, j) has key
+  // H + i*n + j.
+  const H = n * (n - 1);
+  // -2 = not computed yet, -1 = no crossing, otherwise the point's index.
+  const pointOf = new Int32Array(H * 2 + n).fill(-2);
+  const coords: number[] = [];
+  const crossing = (
+    key: number,
+    a: number,
+    b: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+  ) => {
+    const cached = pointOf[key] as number;
+    if (cached !== -2) return cached;
+    let index = -1;
+    if (Number.isFinite(a) && Number.isFinite(b) && a >= 0 !== b >= 0) {
+      const s = a / (a - b);
+      const x = x0 + (x1 - x0) * s;
+      const y = y0 + (y1 - y0) * s;
+      const there = fn(x, y);
+      if (
+        Number.isFinite(there) &&
+        Math.abs(there) <= ROOT_TOLERANCE * Math.max(Math.abs(a), Math.abs(b))
+      ) {
+        index = coords.length / 2;
+        coords.push(x, y);
+      }
+    }
+    pointOf[key] = index;
+    return index;
+  };
+
+  // Each crossing point joins at most two segments (one per adjacent cell).
+  const links: number[][] = [];
+  const link = (p: number, q: number) => {
+    if (p < 0 || q < 0 || p === q) return;
+    (links[p] ??= []).push(q);
+    (links[q] ??= []).push(p);
+  };
+
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - 1; j++) {
+      const v00 = values[i * n + j] as number;
+      const v10 = values[i * n + j + 1] as number;
+      const v01 = values[(i + 1) * n + j] as number;
+      const v11 = values[(i + 1) * n + j + 1] as number;
+      // Most cells lie entirely on one side of the curve.
+      const sign = v00 >= 0;
+      if (v10 >= 0 === sign && v01 >= 0 === sign && v11 >= 0 === sign) continue;
+      const [x0, x1, y0, y1] = [
+        xs[j] as number,
+        xs[j + 1] as number,
+        ys[i] as number,
+        ys[i + 1] as number,
+      ];
+      const bottom = crossing(i * (n - 1) + j, v00, v10, x0, y0, x1, y0);
+      const top = crossing((i + 1) * (n - 1) + j, v01, v11, x0, y1, x1, y1);
+      const left = crossing(H + i * n + j, v00, v01, x0, y0, x0, y1);
+      const right = crossing(H + i * n + j + 1, v10, v11, x1, y0, x1, y1);
+      const found = [bottom, right, top, left].filter((p) => p >= 0);
+      if (found.length === 2) {
+        link(found[0] as number, found[1] as number);
+      } else if (found.length === 4) {
+        // Saddle: corners 00 and 11 share a sign. If the centre has that sign too, the two
+        // branches cut off corners 10 and 01; otherwise they cut off 00 and 11.
+        const centre = fn((x0 + x1) / 2, (y0 + y1) / 2);
+        if (centre >= 0 === v00 >= 0) {
+          link(bottom, right);
+          link(top, left);
+        } else {
+          link(bottom, left);
+          link(top, right);
+        }
+      }
+    }
+  }
+
+  // Walk the links into polylines: open chains from their ends first, then closed loops.
+  const visited = new Uint8Array(coords.length / 2);
+  const polylines: Float64Array[] = [];
+  const walk = (start: number) => {
+    const chain = [start];
+    visited[start] = 1;
+    let previous = -1;
+    let current = start;
+    for (;;) {
+      const next = (links[current] ?? []).find((q) => q !== previous && !visited[q]);
+      if (next === undefined) {
+        // Close a loop back to its start.
+        if ((links[current] ?? []).includes(start) && chain.length > 2) chain.push(start);
+        break;
+      }
+      visited[next] = 1;
+      chain.push(next);
+      previous = current;
+      current = next;
+    }
+    if (chain.length < 2) return;
+    const line = new Float64Array(chain.length * 3);
+    chain.forEach((p, k) => {
+      line[k * 3] = coords[p * 2] as number;
+      line[k * 3 + 1] = coords[p * 2 + 1] as number;
+    });
+    polylines.push(line);
+  };
+  for (let p = 0; p < visited.length; p++) {
+    if (!visited[p] && (links[p]?.length ?? 0) === 1) walk(p);
+  }
+  for (let p = 0; p < visited.length; p++) {
+    if (!visited[p] && (links[p]?.length ?? 0) > 0) walk(p);
+  }
+  return { polylines, finiteCount };
+}

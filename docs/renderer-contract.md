@@ -53,16 +53,17 @@ the renderer's whole lifetime.
 
 ## Three.js renderer
 
-| State     | Three.js representation                                                                                         |
-| --------- | --------------------------------------------------------------------------------------------------------------- |
-| `point`   | Small sphere (shared geometry)                                                                                  |
-| `segment` | `Line2` (screen-space width; WebGL `LineBasicMaterial` is always 1px)                                           |
-| `vector`  | Arrow: cylinder shaft + cone head (shared geometries), hidden when zero-length                                  |
-| `plane`   | Translucent square patch with an outline, oriented along the normal                                             |
-| `curve`   | One `Line2` per polyline                                                                                        |
-| `surface` | Indexed mesh with smooth normals over the defined grid cells, plus faint grid lines                             |
-| `label`   | DOM text in a `CSS2DRenderer` overlay ([ADR-0014](adr/0014-labels-as-dom-text.md))                              |
-| axes/grid | From `scene.axes` / `scene.grid` (renderer options override): axes with ticks, numbers and names; grid on z = 0 |
+| State      | Three.js representation                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------- |
+| `point`    | Small sphere (shared geometry)                                                                                  |
+| `segment`  | `Line2` (screen-space width; WebGL `LineBasicMaterial` is always 1px)                                           |
+| `vector`   | Arrow: cylinder shaft + cone head (shared geometries), hidden when zero-length                                  |
+| `plane`    | Translucent square patch with an outline, oriented along the normal                                             |
+| `curve`    | One `Line2` per polyline                                                                                        |
+| `implicit` | Like `curve`: one `Line2` per polyline                                                                          |
+| `surface`  | Indexed mesh with smooth normals over the defined grid cells, plus faint grid lines                             |
+| `label`    | DOM text in a `CSS2DRenderer` overlay ([ADR-0014](adr/0014-labels-as-dom-text.md))                              |
+| axes/grid  | From `scene.axes` / `scene.grid` (renderer options override): axes with ticks, numbers and names; grid on z = 0 |
 
 - **Coordinates:** EyeViz is z-up. The 3D camera sets `camera.up = (0, 0, 1)` and keeps world
   coordinates unchanged, so no per-point conversion is needed.

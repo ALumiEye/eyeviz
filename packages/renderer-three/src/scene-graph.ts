@@ -4,6 +4,7 @@
  */
 import type {
   CurveState,
+  ImplicitState,
   LabelState,
   ObjectModel,
   ObjectState,
@@ -267,6 +268,15 @@ export class SceneGraph {
           this.#resolution,
           curvePolylines,
         );
+      case "implicit":
+        return new LineView(
+          this.root,
+          object.id,
+          color,
+          LINE_WIDTH.curve,
+          this.#resolution,
+          implicitPolylines,
+        );
       case "surface":
         return new SurfaceView(this.root, object.id, color);
       case "label":
@@ -351,6 +361,11 @@ const segmentPolylines: Polylines = (state) => {
 const curvePolylines: Polylines = (state) => {
   const curve = state as CurveState;
   return { visible: curve.visible && curve.valid, lines: curve.polylines };
+};
+
+const implicitPolylines: Polylines = (state) => {
+  const implicit = state as ImplicitState;
+  return { visible: implicit.visible && implicit.valid, lines: implicit.polylines };
 };
 
 /** Screen-space thick lines: one `Line2` per polyline (segments have exactly one). */

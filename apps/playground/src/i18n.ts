@@ -55,6 +55,7 @@ const en = {
   addPlane: "Plane",
   addGraph: "Function graph",
   addSurface: "Surface",
+  addImplicit: "Curve from an equation",
   addLabel: "Label",
   addNumber: "Slider",
   addToggle: "Toggle",
@@ -95,6 +96,9 @@ const en = {
   curveHint:
     "The curve is (x, y, z) as the variable runs through its range. For y = f(x), use x, f(x), 0.",
   surfaceHint: "The surface is (x, y, z) as both variables run through their ranges.",
+  implicitHint:
+    "The curve is every point (x, y) where both sides are equal, e.g. x^2 + y^2 = 4 (a circle).",
+  equation: "Equation",
   text: "Text",
   at: "Anchored at",
   value: "Value",
@@ -163,11 +167,12 @@ const en = {
   factAt: "at",
   // Quick graph
   quickGraph: "Quick graph",
-  quickGraphPlaceholder: "e.g. x^3 - 3x   ·   2sin²x   ·   ax^2 + bx + c",
+  quickGraphPlaceholder: "e.g. x^3 - 3x   ·   2sin²x   ·   x² + y² = 4",
   quickGraphFrom: "x from",
   quickGraphTo: "to",
   quickGraphDraw: "Draw",
-  quickGraphHint: "Type a function as on paper and press Enter. Unknown letters become sliders.",
+  quickGraphHint:
+    "Type a function or an equation as on paper and press Enter. Unknown letters become sliders.",
   quickGraphNewSliders: (names: string) => `new sliders: ${names}`,
   quickGraphAdded: (sliders: string) =>
     sliders ? `Graph added, with sliders ${sliders}` : "Graph added",
@@ -233,6 +238,7 @@ const vi: Dictionary = {
   addPlane: "Mặt phẳng",
   addGraph: "Đồ thị hàm số",
   addSurface: "Mặt cong",
+  addImplicit: "Đường cong theo phương trình",
   addLabel: "Nhãn chữ",
   addNumber: "Thanh trượt",
   addToggle: "Công tắc",
@@ -271,6 +277,9 @@ const vi: Dictionary = {
   domain: "Khoảng",
   curveHint: "Đường cong là (x, y, z) khi biến chạy trong khoảng. Với y = f(x), nhập x, f(x), 0.",
   surfaceHint: "Mặt cong là (x, y, z) khi hai biến chạy trong khoảng của chúng.",
+  implicitHint:
+    "Đường cong gồm mọi điểm (x, y) làm hai vế bằng nhau, ví dụ x^2 + y^2 = 4 (đường tròn).",
+  equation: "Phương trình",
   text: "Nội dung",
   at: "Gắn tại",
   value: "Giá trị",
@@ -337,11 +346,12 @@ const vi: Dictionary = {
   factGrid: (rows, columns) => `lưới ${rows} × ${columns}`,
   factAt: "tại",
   quickGraph: "Vẽ nhanh",
-  quickGraphPlaceholder: "ví dụ: x^3 - 3x   ·   2sin²x   ·   1,5x^2 + bx + c",
+  quickGraphPlaceholder: "ví dụ: x^3 - 3x   ·   2sin²x   ·   x² + y² = 4",
   quickGraphFrom: "x từ",
   quickGraphTo: "đến",
   quickGraphDraw: "Vẽ",
-  quickGraphHint: "Gõ hàm số như viết trên giấy rồi bấm Enter. Chữ cái lạ sẽ thành thanh trượt.",
+  quickGraphHint:
+    "Gõ hàm số hoặc phương trình như viết trên giấy rồi bấm Enter. Chữ cái lạ sẽ thành thanh trượt.",
   quickGraphNewSliders: (names) => `thanh trượt mới: ${names}`,
   quickGraphAdded: (sliders) =>
     sliders ? `Đã vẽ đồ thị, thêm thanh trượt ${sliders}` : "Đã vẽ đồ thị",

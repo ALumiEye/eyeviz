@@ -77,6 +77,20 @@ export interface SurfaceModel extends ObjectModelBase {
   readonly position: Vec3Model;
 }
 
+export interface ImplicitModel extends ObjectModelBase {
+  readonly type: "implicit";
+  /** Horizontal and vertical variables. */
+  readonly variables: readonly [string, string];
+  /** Domains in the order of `variables`. */
+  readonly domain: readonly [
+    readonly [ScalarModel, ScalarModel],
+    readonly [ScalarModel, ScalarModel],
+  ];
+  /** The two sides of the equation. */
+  readonly left: ScalarModel;
+  readonly right: ScalarModel;
+}
+
 export interface LabelModel extends ObjectModelBase {
   readonly type: "label";
   readonly text: string;
@@ -84,7 +98,14 @@ export interface LabelModel extends ObjectModelBase {
 }
 
 export type ObjectModel =
-  PointModel | SegmentModel | VectorModel | PlaneModel | CurveModel | SurfaceModel | LabelModel;
+  | PointModel
+  | SegmentModel
+  | VectorModel
+  | PlaneModel
+  | CurveModel
+  | SurfaceModel
+  | ImplicitModel
+  | LabelModel;
 
 export interface TimelineModel {
   /** Seconds; may depend on parameters (never on `t`). Absent = time runs on. */

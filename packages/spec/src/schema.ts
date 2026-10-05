@@ -106,6 +106,15 @@ const surface = z.strictObject({
   position: vec3,
 });
 
+const implicit = z.strictObject({
+  ...objectBase,
+  type: z.literal("implicit"),
+  // Exactly one "=" is enforced by validateSpec.
+  equation: z.string().min(3).max(SPEC_LIMITS.maxExpressionLength),
+  variables: z.exactOptional(z.tuple([id, id])),
+  domain: z.record(id, z.tuple([scalar, scalar])),
+});
+
 const labelObject = z.strictObject({
   ...objectBase,
   type: z.literal("label"),
@@ -120,6 +129,7 @@ export const sceneObjectSchema = z.discriminatedUnion("type", [
   plane,
   curve,
   surface,
+  implicit,
   labelObject,
 ]);
 

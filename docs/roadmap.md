@@ -12,7 +12,7 @@ block them; they are **not commitments**.
 | 4     | Educational interactions | **Done**    |
 | 5     | Direct manipulation      | **Done**    |
 | 6     | Visual authoring         | **Done**    |
-| 7     | Advanced STEM            | Exploratory |
+| 7     | Advanced STEM            | In progress |
 
 ## Phase 0 — Architecture foundation
 
@@ -112,6 +112,11 @@ discontinuity detection.
 
 Not yet: object type conversion, multi-select, copy/paste, a formula palette.
 
-## Phase 7 — Advanced STEM (exploratory)
+## Phase 7 — Advanced STEM (in progress)
 
-Vector fields, calculus visualizations, linear transformations, waves, optics, optional physics.
+- [x] `implicit` — curves from equations (`x^2 + y^2 = r^2`), traced by marching squares in
+      core ([ADR-0020](adr/0020-implicit-curves.md)); quick graph accepts equations; "Add" menu,
+      inspector form; conic sections example
+
+Candidates: tangent lines and derivatives, piecewise functions, vector fields, calculus
+visualizations, linear transformations, waves, optics, optional physics.

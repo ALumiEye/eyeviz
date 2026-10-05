@@ -27,8 +27,10 @@ export {
 } from "./playback";
 export {
   sampleCurve,
+  sampleImplicit,
   sampleSurface,
   type CurveFunction,
+  type ImplicitFunction,
   type SurfaceFunction,
   type SurfaceGrid,
 } from "./sampling";
@@ -38,6 +40,7 @@ export {
   type AnchorModel,
   type BooleanParameterModel,
   type CurveModel,
+  type ImplicitModel,
   type LabelModel,
   type PlaneModel,
   type SceneSettingsModel,
@@ -57,6 +60,7 @@ export {
 } from "./model";
 export type {
   CurveState,
+  ImplicitState,
   LabelState,
   ObjectState,
   PlaneState,

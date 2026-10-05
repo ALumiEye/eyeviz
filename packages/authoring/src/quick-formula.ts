@@ -1,6 +1,7 @@
 /**
  * Turns a formula typed the way people write it ("y = 3x² − 2sin x") into a strict EyeViz
- * expression ("3*x^2 - 2*sin(x)"). This is an editor convenience: specs always store the strict
+ * expression ("3*x^2 - 2*sin(x)"), and an equation ("x² + y² = 4") into a strict equation for an
+ * implicit curve ("x^2 + y^2 = 4"). This is an editor convenience: specs always store the strict
  * form (implicit multiplication stays invalid in specs — docs/adr/0002, 0013).
  */
 import { compileExpression, SUPPORTED_CONSTANTS, SUPPORTED_FUNCTIONS } from "@alumieye/eyeviz-math";
@@ -9,7 +10,12 @@ import { ID_PATTERN } from "@alumieye/eyeviz-spec";
 export type QuickFormulaResult =
   | {
       readonly ok: true;
-      /** Strict EyeViz expression. */
+      /**
+       * `"function"`: a graph y = f(x), `expression` is f(x). `"equation"`: an implicit curve in
+       * x and y, `expression` is the strict equation `left = right`.
+       */
+      readonly kind: "function" | "equation";
+      /** Strict EyeViz expression, or strict equation. */
       readonly expression: string;
       /** Names used but not known yet (candidates for new sliders), in order of appearance. */
       readonly unknown: readonly string[];
@@ -93,7 +99,7 @@ type Token =
   { kind: "number"; text: string } | { kind: "name"; text: string } | { kind: "op"; text: string };
 
 /**
- * @param input    What the user typed, e.g. `y = ax^2 + bx + c`.
+ * @param input    What the user typed, e.g. `y = ax^2 + bx + c` or `x^2 + y^2 = r^2`.
  * @param known    Names already defined (parameters), so `ab` with a slider `ab` stays `ab`.
  * @param variable The graph's variable, `x` by default.
  */
@@ -102,11 +108,62 @@ export function parseQuickFormula(
   known: Iterable<string>,
   variable = "x",
 ): QuickFormulaResult {
-  const knownNames = new Set([...known, variable, "t"]);
-  let text = input.trim().replace(/^(y|f\s*\(\s*[a-z]\s*\))\s*=/i, "");
+  const knownNames = [...known];
+  let text = input.trim();
   for (const [pattern, replacement] of SYMBOLS) text = text.replace(pattern, replacement);
   text = absoluteBars(decimalCommas(text));
 
+  const sides = text.split("=");
+  if (sides.length > 2) {
+    return { ok: false, expression: text, message: "An equation has exactly one '='" };
+  }
+  if (sides.length === 2) {
+    const [left, right] = sides as [string, string];
+    // "y = …" or "f(x) = …" without y on the right is a graph of a function.
+    if (/^\s*(y|f\s*\(\s*[a-z]\s*\))\s*$/i.test(left)) {
+      const graph = toStrict(right, new Set([...knownNames, variable, "t"]));
+      if (!graph.ok || !graph.symbols.has("y") || knownNames.includes("y")) {
+        return finish("function", graph, new Set([...knownNames, variable, "t"]));
+      }
+    }
+    const names = new Set([...knownNames, "x", "y", "t"]);
+    const strictLeft = toStrict(left, names);
+    if (!strictLeft.ok) return strictLeft;
+    const strictRight = toStrict(right, names);
+    if (!strictRight.ok) return strictRight;
+    return finish(
+      "equation",
+      {
+        ok: true,
+        expression: `${strictLeft.expression} = ${strictRight.expression}`,
+        symbols: new Set([...strictLeft.symbols, ...strictRight.symbols]),
+      },
+      names,
+    );
+  }
+  const names = new Set([...knownNames, variable, "t"]);
+  return finish("function", toStrict(text, names), names);
+}
+
+type Strict =
+  | { readonly ok: true; readonly expression: string; readonly symbols: ReadonlySet<string> }
+  | { readonly ok: false; readonly expression: string; readonly message: string };
+
+/** The result, with the names that are not known yet as slider candidates. */
+function finish(
+  kind: "function" | "equation",
+  strict: Strict,
+  knownNames: ReadonlySet<string>,
+): QuickFormulaResult {
+  if (!strict.ok) return strict;
+  const unknown = [...strict.symbols].filter(
+    (name) => !knownNames.has(name) && ID_PATTERN.test(name) && !FUNCTIONS.has(name),
+  );
+  return { ok: true, kind, expression: strict.expression, unknown };
+}
+
+/** One side of a formula (already normalized) → strict expression and its free names. */
+function toStrict(text: string, knownNames: ReadonlySet<string>): Strict {
   const tokens = expandNames(tokenize(text), knownNames);
   const unsupported = tokens.find(
     (token) =>
@@ -133,10 +190,7 @@ export function parseQuickFormula(
       message: `Function '${bare}' needs an argument, e.g. ${bare}(x)`,
     };
   }
-  const unknown = [...compiled.expression.symbols].filter(
-    (name) => !knownNames.has(name) && ID_PATTERN.test(name) && !FUNCTIONS.has(name),
-  );
-  return { ok: true, expression, unknown };
+  return { ok: true, expression, symbols: compiled.expression.symbols };
 }
 
 /**

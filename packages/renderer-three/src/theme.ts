@@ -4,6 +4,8 @@ export interface Palette {
   readonly point: number;
   readonly segment: number;
   readonly curve: number;
+  /** Implicit curves read as curves: same colour by default. */
+  readonly implicit: number;
   readonly vector: number;
   readonly plane: number;
   readonly surface: number;
@@ -27,6 +29,7 @@ export const PALETTES: Readonly<Record<ThemeName, Palette>> = Object.freeze({
     point: 0xe8590c,
     segment: 0x343a40,
     curve: 0x1c7ed6,
+    implicit: 0x1c7ed6,
     vector: 0x7048e8,
     plane: 0x12b886,
     surface: 0x4dabf7,
@@ -43,6 +46,7 @@ export const PALETTES: Readonly<Record<ThemeName, Palette>> = Object.freeze({
     point: 0xff922b,
     segment: 0xdee2e6,
     curve: 0x4dabf7,
+    implicit: 0x4dabf7,
     vector: 0x9775fa,
     plane: 0x38d9a9,
     surface: 0x339af0,

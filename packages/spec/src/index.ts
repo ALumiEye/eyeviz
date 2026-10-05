@@ -5,7 +5,7 @@
  * This package must stay free of rendering, DOM, React, Three.js and math-engine code.
  */
 export { SPEC_VERSION, type SpecVersion } from "./version";
-export { SPEC_LIMITS, ID_PATTERN } from "./limits";
+export { SPEC_LIMITS, ID_PATTERN, DEFAULT_IMPLICIT_VARIABLES } from "./limits";
 export { EyeVizError, formatPath, type EyeVizIssue, type EyeVizIssueCode } from "./issues";
 export { validateSpec, type ValidationResult } from "./validate";
 export { getSceneSpecJsonSchema } from "./json-schema";
@@ -15,6 +15,7 @@ export type {
   BooleanParameterSpec,
   CameraSpec,
   CurveSpec,
+  ImplicitSpec,
   NumberParameterSpec,
   NumberVec3,
   ParameterSpec,

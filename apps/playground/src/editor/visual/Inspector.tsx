@@ -1,14 +1,15 @@
 /** Property forms for the selected object, parameter, step or the scene itself. */
-import type {
-  Anchor,
-  EyeVizEngine,
-  EyeVizIssue,
-  ParameterSpec,
-  Scalar,
-  SceneObjectSpec,
-  SceneSpec,
-  StepSpec,
-  Vec3,
+import {
+  DEFAULT_IMPLICIT_VARIABLES,
+  type Anchor,
+  type EyeVizEngine,
+  type EyeVizIssue,
+  type ParameterSpec,
+  type Scalar,
+  type SceneObjectSpec,
+  type SceneSpec,
+  type StepSpec,
+  type Vec3,
 } from "@alumieye/eyeviz";
 import {
   parameterUsers,
@@ -25,6 +26,7 @@ import {
   CommitInput,
   DeleteButton,
   Field,
+  FormulaInput,
   issuesAt,
   MultiSelect,
   NumberInput,
@@ -152,6 +154,7 @@ const TYPE_NAMES = (t: T): Record<SceneObjectSpec["type"], string> => ({
   plane: t.addPlane,
   curve: t.addGraph,
   surface: t.addSurface,
+  implicit: t.addImplicit,
   label: t.addLabel,
 });
 
@@ -337,6 +340,30 @@ function ObjectForm({
             value={object.position}
             onChange={(v) => change({ position: v }, "position")}
           />
+        </>
+      ) : null}
+
+      {object.type === "implicit" ? (
+        <>
+          <p className="field-hint">{t.implicitHint}</p>
+          <FormulaInput
+            label={t.equation}
+            value={object.equation}
+            issues={issuesAt(issues, `${path}.equation`)}
+            onChange={(v) => change({ equation: v }, "equation")}
+          />
+          {(object.variables ?? DEFAULT_IMPLICIT_VARIABLES).map((variable) => (
+            <RangeInput
+              key={variable}
+              label={`${t.domain} (${variable})`}
+              value={object.domain[variable] ?? [-5, 5]}
+              issues={issues}
+              path={`${path}.domain.${variable}`}
+              onChange={(v) =>
+                change({ domain: { ...object.domain, [variable]: v } }, `domain.${variable}`)
+              }
+            />
+          ))}
         </>
       ) : null}
 

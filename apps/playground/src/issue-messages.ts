@@ -30,6 +30,7 @@ const KINDS: Readonly<Record<string, string>> = {
   vector: "vectơ",
   plane: "mặt phẳng",
   surface: "mặt cong",
+  implicit: "đường cong theo phương trình",
   label: "nhãn",
   step: "bước",
 };
@@ -62,6 +63,8 @@ const JSON_PROBLEMS: Readonly<Record<string, string>> = {
   "unexpected end of comment": "chú thích chưa đóng",
   "invalid comment token": "JSON không cho phép chú thích",
 };
+
+const shape = (kind: string) => (kind === "Surface" ? "Mặt cong" : "Đường cong");
 
 const kind = (name: string) => KINDS[name] ?? name;
 const type = (name: string) => TYPES[name] ?? name;
@@ -169,14 +172,23 @@ const RULES: readonly Rule[] = [
     (id) => `Tham số '${id}': thanh trượt cần có cả giá trị nhỏ nhất và lớn nhất`,
   ],
   [
-    /^Surface '(.+?)' needs two different variables$/,
-    (id) => `Mặt cong '${id}' cần hai biến khác nhau`,
+    /^(Surface|Implicit curve) '(.+?)' needs two different variables$/,
+    (kind, id) => `${shape(kind)} '${id}' cần hai biến khác nhau`,
   ],
   [
-    /^Surface '(.+?)' has no domain for variable '(.+?)'; add (.+)$/,
-    (id, variable, fix) =>
-      `Mặt cong '${id}' chưa có khoảng cho biến '${variable}'; hãy thêm ${fix}`,
+    /^(Surface|Implicit curve) '(.+?)' has no domain for variable '(.+?)'; add (.+)$/,
+    (kind, id, variable, fix) =>
+      `${shape(kind)} '${id}' chưa có khoảng cho biến '${variable}'; hãy thêm ${fix}`,
   ],
+  [
+    /^The equation of '(.+?)' must contain exactly one '=', e\.g\. (.+)$/,
+    (id, example) => `Phương trình của '${id}' phải có đúng một dấu '=', ví dụ ${example}`,
+  ],
+  [
+    /^The equation of '(.+?)' is undefined on its whole domain$/,
+    (id) => `Phương trình của '${id}' không xác định trên cả miền`,
+  ],
+  [/^An equation has exactly one '='$/, () => "Phương trình chỉ có đúng một dấu '='"],
   [
     /^Domain key '(.+?)' of '(.+?)' is not one of its variables \((.+)\)$/,
     (key, id, variables) => `Khoảng '${key}' của '${id}' không phải biến của nó (${variables})`,

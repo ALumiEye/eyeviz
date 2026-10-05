@@ -147,6 +147,9 @@ export function App() {
     setSelection(null);
     setJsonText(`${formatJson(next)}\n`);
     setJsonAnalysis(undefined);
+    // A different scene: frame it, even when it shares the previous scene's camera settings
+    // (the renderer keeps the view across edits of one scene).
+    requestAnimationFrame(() => sceneRef.current?.resetView());
   };
 
   const loadExample = (id: string) => {

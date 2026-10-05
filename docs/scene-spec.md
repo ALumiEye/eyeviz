@@ -262,6 +262,30 @@ a sphere is `"variables": ["u", "v"], "position": ["cos(u)*sin(v)", "sin(u)*sin(
 Grid density is an engine option, not a spec field. Where the surface is undefined
 (e.g. `sqrt(x)` for `x < 0`), that part is left out.
 
+### `implicit`
+
+The curve where an equation holds — every point `(x, y, 0)` of the domain where both sides are
+equal. Circles, ellipses, hyperbolas and other relations that are not graphs of a function.
+
+| Field       | Type                               | Notes                                                                              |
+| ----------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `equation`  | string                             | Two expressions joined by exactly one `=`; may use both variables, parameters, `t` |
+| `variables` | `[identifier, identifier]`         | Optional, default `["x", "y"]` (horizontal, vertical). Local to this curve         |
+| `domain`    | `{ [variable]: [Scalar, Scalar] }` | Exactly one range per variable. May use parameters and `t`                         |
+
+```json
+{
+  "id": "c",
+  "type": "implicit",
+  "equation": "x^2/a^2 + y^2/b^2 = 1",
+  "domain": { "x": [-6, 6], "y": [-6, 6] }
+}
+```
+
+The curve lies in the plane z = 0. Grid density is an engine option, not a spec field. Only
+places where the two sides cross are drawn: an equation that only touches equality
+(`x^2 + y^2 = 0`) draws nothing. See [ADR-0020](adr/0020-implicit-curves.md).
+
 ### `label`
 
 Plain text shown next to a point or position. Text is never interpreted as HTML.
@@ -280,9 +304,10 @@ Plain text shown next to a point or position. Text is never interpreted as HTML.
 | Context                                             | Number parameters | `t` | Constants (`pi`, `e`) | Own variable(s) |
 | --------------------------------------------------- | :---------------: | :-: | :-------------------: | :-------------: |
 | `point.position`, `label.at`, `vector.*`, `plane.*` |         ✓         |  ✓  |           ✓           |                 |
-| `curve.domain`, `surface.domain`                    |         ✓         |  ✓  |           ✓           |                 |
+| `curve.domain`, `surface.domain`, `implicit.domain` |         ✓         |  ✓  |           ✓           |                 |
 | `curve.position`                                    |         ✓         |  ✓  |           ✓           |  ✓ `variable`   |
 | `surface.position`                                  |         ✓         |  ✓  |           ✓           |  ✓ `variables`  |
+| `implicit.equation`                                 |         ✓         |  ✓  |           ✓           |  ✓ `variables`  |
 
 `t` is the scene time in seconds (default `0`), driven by a player (see [Timeline](#timeline)).
 `timeline.duration` may use parameters and constants, but not `t`.

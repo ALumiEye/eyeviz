@@ -89,6 +89,34 @@ export function ScalarInput({
   );
 }
 
+/** A formula kept as text (e.g. an equation). Applies on every keystroke. */
+export function FormulaInput({
+  value,
+  onChange,
+  label,
+  issues = [],
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  issues?: readonly EyeVizIssue[];
+}) {
+  const id = useId();
+  return (
+    <Field label={label} issues={issues} htmlFor={id}>
+      <input
+        id={id}
+        className="scalar-input formula"
+        value={value}
+        spellCheck={false}
+        autoComplete="off"
+        aria-invalid={issues.length > 0}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </Field>
+  );
+}
+
 /** Three scalar inputs for x, y, z. */
 export function Vec3Input({
   value,

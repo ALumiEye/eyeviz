@@ -17,5 +17,13 @@ ADRs are immutable once accepted; a later ADR may supersede an earlier one.
 | [0010](0010-identifiers.md)                       | Identifier-style IDs in one namespace                                    | Accepted |
 | [0011](0011-react-first-integration.md)           | React is the first-class framework integration                           | Accepted |
 | [0012](0012-toolchain.md)                         | Toolchain: TypeScript 6, tsup, Vitest, Changesets                        | Accepted |
+| [0013](0013-hand-written-expression-parser.md)    | Hand-written expression parser (supersedes 0002)                         | Accepted |
+| [0014](0014-labels-as-dom-text.md)                | Labels and tick numbers are DOM text                                     | Accepted |
+| [0015](0015-phase-2-primitives.md)                | Shapes of the Phase 2 primitives                                         | Accepted |
+| [0016](0016-time-driven-by-expressions.md)        | Motion is written as expressions in `t`                                  | Accepted |
+| [0017](0017-steps.md)                             | Steps, highlighting, focus and selection                                 | Accepted |
+| [0018](0018-direct-manipulation.md)               | Direct manipulation through parameters                                   | Accepted |
+| [0019](0019-authoring-and-visual-editor.md)       | Authoring commands and the visual editor                                 | Accepted |
+| [0020](0020-implicit-curves.md)                   | Implicit curves from equations                                           | Accepted |
 
 Template: Status · Context · Decision · Consequences.

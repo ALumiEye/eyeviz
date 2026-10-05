@@ -151,6 +151,21 @@ export interface SurfaceSpec extends ObjectSpecBase {
   readonly position: Vec3;
 }
 
+/**
+ * The curve where `equation` holds, e.g. `"x^2 + y^2 = 4"`: every point `(x, y, 0)` of the
+ * domain where the two sides are equal. Its variables are local, `x` and `y` by default.
+ * See docs/adr/0020-implicit-curves.md.
+ */
+export interface ImplicitSpec extends ObjectSpecBase {
+  readonly type: "implicit";
+  /** Two expressions joined by one `=`. */
+  readonly equation: string;
+  /** Names of the horizontal and vertical variables. Default `["x", "y"]`. */
+  readonly variables?: readonly [string, string];
+  /** One `[start, end]` per variable, keyed by variable name. */
+  readonly domain: Readonly<Record<string, readonly [Scalar, Scalar]>>;
+}
+
 /** Plain text shown at a point or position. Never interpreted as HTML. */
 export interface LabelSpec extends ObjectSpecBase {
   readonly type: "label";
@@ -159,7 +174,14 @@ export interface LabelSpec extends ObjectSpecBase {
 }
 
 export type SceneObjectSpec =
-  PointSpec | SegmentSpec | VectorSpec | PlaneSpec | CurveSpec | SurfaceSpec | LabelSpec;
+  | PointSpec
+  | SegmentSpec
+  | VectorSpec
+  | PlaneSpec
+  | CurveSpec
+  | SurfaceSpec
+  | ImplicitSpec
+  | LabelSpec;
 
 export type SceneObjectType = SceneObjectSpec["type"];
 

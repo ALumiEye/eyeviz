@@ -4,6 +4,7 @@ import type { EyeVizIssue, NumberVec3 } from "@alumieye/eyeviz-spec";
 import type {
   AnchorModel,
   CurveModel,
+  ImplicitModel,
   LabelModel,
   ObjectModel,
   PlaneModel,
@@ -13,9 +14,10 @@ import type {
   Vec3Model,
   VectorModel,
 } from "./model";
-import { sampleCurve, sampleSurface } from "./sampling";
+import { sampleCurve, sampleImplicit, sampleSurface } from "./sampling";
 import type {
   CurveState,
+  ImplicitState,
   LabelState,
   ObjectState,
   PlaneState,
@@ -34,6 +36,8 @@ export interface EvaluationContext {
   readonly curveSamples: number;
   /** Samples per side of a surface grid. */
   readonly surfaceSamples: number;
+  /** Samples per side of an implicit curve's grid. */
+  readonly implicitSamples: number;
   /** Objects hidden by the current step. */
   readonly stepHidden: ReadonlySet<string>;
   /** States evaluated so far in this pass (dependencies come first in evaluation order). */
@@ -84,6 +88,8 @@ export function evaluateObject(model: ObjectModel, context: EvaluationContext): 
       return evaluateCurve(model, base, context);
     case "surface":
       return evaluateSurface(model, base, context);
+    case "implicit":
+      return evaluateImplicit(model, base, context);
     case "label":
       return evaluateLabel(model, base, context);
   }
@@ -390,6 +396,59 @@ function evaluateSurface(
     columns: grid.columns,
     positions: grid.positions,
   });
+}
+
+function evaluateImplicit(
+  model: ImplicitModel,
+  base: Base,
+  context: EvaluationContext,
+): ImplicitState {
+  const state = { ...base, type: "implicit" } as const;
+  if (!base.visible) {
+    return Object.freeze({ ...state, valid: true, issues: EMPTY, polylines: [] });
+  }
+
+  const at = `objects[${model.index}]`;
+  const [u, v] = model.variables;
+  const [uStart, uEnd] = model.domain[0].map((s) => evaluateScalar(s, context.scope)) as [
+    number,
+    number,
+  ];
+  const [vStart, vEnd] = model.domain[1].map((s) => evaluateScalar(s, context.scope)) as [
+    number,
+    number,
+  ];
+  const issues = [
+    domainIssue(uStart, uEnd, model.id, `${at}.domain.${u}`),
+    domainIssue(vStart, vEnd, model.id, `${at}.domain.${v}`),
+  ].filter((i): i is EyeVizIssue => i !== undefined);
+  if (issues.length > 0) {
+    return Object.freeze({ ...state, valid: false, issues: Object.freeze(issues), polylines: [] });
+  }
+
+  const scope: Record<string, number> = Object.assign(Object.create(null), context.scope);
+  const { left, right } = model;
+  const { polylines, finiteCount } = sampleImplicit(
+    (a, b) => {
+      scope[u] = a;
+      scope[v] = b;
+      return evaluateScalar(left, scope) - evaluateScalar(right, scope);
+    },
+    [uStart, uEnd],
+    [vStart, vEnd],
+    context.implicitSamples,
+  );
+
+  if (finiteCount === 0) {
+    const issue: EyeVizIssue = {
+      code: "EXPRESSION_EVALUATION",
+      message: `The equation of '${model.id}' is undefined on its whole domain`,
+      path: `${at}.equation`,
+    };
+    return Object.freeze({ ...state, valid: false, issues: Object.freeze([issue]), polylines: [] });
+  }
+  // No solution in the domain (e.g. x^2 + y^2 = -1) is valid: there is nothing to draw.
+  return Object.freeze({ ...state, valid: true, issues: EMPTY, polylines });
 }
 
 function evaluateLabel(model: LabelModel, base: Base, context: EvaluationContext): LabelState {

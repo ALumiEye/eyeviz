@@ -57,6 +57,16 @@ export interface SurfaceState extends ObjectStateBase {
   readonly positions: Float64Array;
 }
 
+export interface ImplicitState extends ObjectStateBase {
+  readonly type: "implicit";
+  /**
+   * The curve in the plane z = 0 as interleaved `x, y, z` coordinates, one array per connected
+   * piece (closed loops repeat their first point at the end). Empty while hidden, or when the
+   * equation has no solution in the domain.
+   */
+  readonly polylines: readonly Float64Array[];
+}
+
 export interface LabelState extends ObjectStateBase {
   readonly type: "label";
   readonly text: string;
@@ -64,7 +74,14 @@ export interface LabelState extends ObjectStateBase {
 }
 
 export type ObjectState =
-  PointState | SegmentState | VectorState | PlaneState | CurveState | SurfaceState | LabelState;
+  | PointState
+  | SegmentState
+  | VectorState
+  | PlaneState
+  | CurveState
+  | SurfaceState
+  | ImplicitState
+  | LabelState;
 
 export interface SceneState {
   /** Scene time in seconds. */

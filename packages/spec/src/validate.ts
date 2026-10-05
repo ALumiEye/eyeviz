@@ -1,5 +1,6 @@
 import type * as z from "zod";
 import { formatPath, type EyeVizIssue } from "./issues";
+import { DEFAULT_IMPLICIT_VARIABLES } from "./limits";
 import { sceneSpecSchema } from "./schema";
 import type {
   NumberParameterSpec,
@@ -200,35 +201,50 @@ function checkIdsAndReferences(spec: SceneSpec): EyeVizIssue[] {
       case "curve":
         variableClash(object.variable, `${at}.variable`);
         break;
-      case "surface": {
-        const [u, v] = object.variables;
+      case "surface":
+      case "implicit": {
+        const kind = object.type === "surface" ? "Surface" : "Implicit curve";
+        const variables =
+          object.type === "surface"
+            ? object.variables
+            : (object.variables ?? DEFAULT_IMPLICIT_VARIABLES);
+        const [u, v] = variables;
         if (u === v) {
           issues.push({
             code: "SCHEMA_VALIDATION",
-            message: `Surface '${object.id}' needs two different variables`,
+            message: `${kind} '${object.id}' needs two different variables`,
             path: `${at}.variables[1]`,
           });
         }
-        object.variables.forEach((variable, i) => variableClash(variable, `${at}.variables[${i}]`));
-        for (const variable of object.variables) {
+        variables.forEach((variable, i) =>
+          variableClash(variable, object.variables ? `${at}.variables[${i}]` : `${at}.equation`),
+        );
+        for (const variable of variables) {
           if (!Object.hasOwn(object.domain, variable)) {
             issues.push({
               code: "SCHEMA_VALIDATION",
-              message: `Surface '${object.id}' has no domain for variable '${variable}'; add "${variable}": [start, end]`,
+              message: `${kind} '${object.id}' has no domain for variable '${variable}'; add "${variable}": [start, end]`,
               path: `${at}.domain`,
               details: { variable },
             });
           }
         }
         for (const key of Object.keys(object.domain)) {
-          if (!object.variables.includes(key)) {
+          if (!variables.includes(key)) {
             issues.push({
               code: "SCHEMA_VALIDATION",
-              message: `Domain key '${key}' of '${object.id}' is not one of its variables (${object.variables.join(", ")})`,
+              message: `Domain key '${key}' of '${object.id}' is not one of its variables (${variables.join(", ")})`,
               path: `${at}.domain.${key}`,
               details: { keys: [key] },
             });
           }
+        }
+        if (object.type === "implicit" && object.equation.split("=").length !== 2) {
+          issues.push({
+            code: "SCHEMA_VALIDATION",
+            message: `The equation of '${object.id}' must contain exactly one '=', e.g. "x^2 + y^2 = 4"`,
+            path: `${at}.equation`,
+          });
         }
         break;
       }

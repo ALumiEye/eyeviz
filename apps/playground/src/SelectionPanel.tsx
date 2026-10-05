@@ -23,6 +23,7 @@ export function facts(state: ObjectState, t: T): string[] {
     case "plane":
       return [`${t.factNormal} ${vec(state.normal)}`, `${t.factThrough} ${vec(state.center)}`];
     case "curve":
+    case "implicit":
       return [
         t.factPieces(
           state.polylines.length,

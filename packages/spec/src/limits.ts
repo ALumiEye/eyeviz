@@ -13,3 +13,9 @@ export const SPEC_LIMITS = {
 
 /** IDs are identifiers so that expressions can reference them. See docs/adr/0010-identifiers.md. */
 export const ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Variables of an implicit curve when the spec does not name them. */
+export const DEFAULT_IMPLICIT_VARIABLES: readonly [string, string] = Object.freeze(["x", "y"]) as [
+  string,
+  string,
+];

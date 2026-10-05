@@ -126,6 +126,33 @@ describe("SceneGraph", () => {
     expect(curve.children).toHaveLength(1);
   });
 
+  it("draws an implicit curve as lines and redraws it when parameters change", () => {
+    const engine = new EyeVizEngine({
+      version: "0.1",
+      parameters: [{ id: "r", value: 2 }],
+      objects: [
+        {
+          id: "c",
+          type: "implicit",
+          equation: "x^2 - y^2 = r",
+          domain: { x: [-4, 4], y: [-4, 4] },
+        },
+      ],
+    });
+    const graph = new SceneGraph(PALETTES.light);
+    graph.setModel(engine.model, engine.getState(), { scale: 1 });
+    engine.subscribe((state, changed) => graph.update(state, changed));
+    const view = graph.root.getObjectByName("c") as THREE.Object3D;
+    // Two branches of the hyperbola → two lines, in the curve colour.
+    expect(view.children.map((c) => c.type)).toEqual(["Line2", "Line2"]);
+    const { disposed, resources } = trackDisposal(view);
+    const before = [...resources].filter((r) => r instanceof THREE.BufferGeometry);
+    engine.setParameter("r", -2);
+    expect(before.every((g) => disposed.has(g))).toBe(true);
+    expect(view.children).toHaveLength(2);
+    expect(PALETTES.light.implicit).toBe(PALETTES.light.curve);
+  });
+
   it("releases every geometry and material on dispose", () => {
     const { graph } = setup();
     const { resources, disposed } = trackDisposal(graph.root);
@@ -157,6 +184,23 @@ describe("bounds and camera", () => {
     const bounds = computeBounds(engine.getState());
     expect(bounds.center[0]).toBeCloseTo(5);
     expect(bounds.radius).toBeCloseTo(Math.hypot(10, 1, 4) / 2);
+  });
+
+  it("includes implicit curves", () => {
+    const engine = new EyeVizEngine({
+      version: "0.1",
+      objects: [
+        {
+          id: "c",
+          type: "implicit",
+          equation: "x^2 + y^2 = 64",
+          domain: { x: [-9, 9], y: [-9, 9] },
+        },
+      ],
+    });
+    const bounds = computeBounds(engine.getState());
+    expect(bounds.max?.[0]).toBeCloseTo(8, 0);
+    expect(bounds.min?.[1]).toBeCloseTo(-8, 0);
   });
 
   it("frames ±5 for an empty scene, so new objects are on screen", () => {

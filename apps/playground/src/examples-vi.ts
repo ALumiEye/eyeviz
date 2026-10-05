@@ -15,6 +15,7 @@ export const EXAMPLE_TEXT_VI: Readonly<Record<string, string>> = {
   "Square pyramid": "Hình chóp tứ giác đều",
   Paraboloid: "Mặt paraboloid",
   Helix: "Đường xoắn ốc",
+  "Conic sections": "Các đường conic",
 
   // Descriptions
   "Triangle ABC. Vertex C sits at distance r from A at angle theta, raised to height h. Drag C or use the sliders. Moving a point moves every segment attached to it.":
@@ -35,6 +36,9 @@ export const EXAMPLE_TEXT_VI: Readonly<Record<string, string>> = {
     "Mặt z = a·(x² + y²) trên hình vuông −2 ≤ x, y ≤ 2, có điểm P trên mặt nằm phía trên (x0, y0). Kéo P trên mặt.",
   "A circular helix of radius R climbing c units per turn, drawn for a given number of turns.":
     "Đường xoắn ốc tròn bán kính R, mỗi vòng lên cao c đơn vị, vẽ theo số vòng cho trước.",
+
+  "The ellipse x²/a² + y²/b² = 1 and the hyperbola x²/a² − y²/b² = 1 drawn from their equations. F1 and F2 are the foci of the ellipse at (±c, 0) with c² = a² − b². Change a and b with the sliders.":
+    "Elip x²/a² + y²/b² = 1 và hypebol x²/a² − y²/b² = 1 được vẽ trực tiếp từ phương trình. F1, F2 là hai tiêu điểm của elip tại (±c, 0) với c² = a² − b². Đổi a, b bằng thanh trượt.",
 
   // Steps
   "Vector a": "Vectơ a",
@@ -80,8 +84,16 @@ export const EXAMPLE_TEXT_VI: Readonly<Record<string, string>> = {
   "b — x component": "b — thành phần x",
   "b — y component": "b — thành phần y",
 
+  "Semi-axis a": "Bán trục a",
+  "Semi-axis b": "Bán trục b",
+  "Show the hyperbola": "Hiện hypebol",
+
   // Object names
   Ball: "Quả bóng",
+  Ellipse: "Elip",
+  Hyperbola: "Hypebol",
+  "Focus F1": "Tiêu điểm F1",
+  "Focus F2": "Tiêu điểm F2",
   "Current x(t)": "x(t) hiện tại",
   End: "Điểm cuối",
   "Foot of P on the x-axis": "Chân đường vuông góc từ P xuống trục x",

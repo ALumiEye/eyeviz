@@ -77,6 +77,8 @@ export class ThreeRenderer implements SceneRenderer {
   #bounds: Bounds = { center: [0, 0, 0], radius: 1 };
   /** The bounds the camera was last framed on (axes and grid cover at least this). */
   #framed: Bounds = { center: [0, 0, 0], radius: 1 };
+  /** Size reference of points and arrows (see SceneGraph); follows the framed view. */
+  #scale = 1;
   #dimension: Dimension = "3d";
   #halfHeight = 1;
   #cameraKey: string | undefined;
@@ -194,7 +196,8 @@ export class ThreeRenderer implements SceneRenderer {
     }
 
     // Object sizes follow what is on screen: the larger of the content and the framed view.
-    this.#graph.setModel(model, state, { scale: union(this.#bounds, this.#framed).radius });
+    this.#scale = union(this.#bounds, this.#framed).radius;
+    this.#graph.setModel(model, state, { scale: this.#scale });
     this.#graph.setEmphasis(state.highlights, this.#selected);
     this.#buildGuides(); // after framing: guides cover the framed view and the content
 
@@ -252,6 +255,13 @@ export class ThreeRenderer implements SceneRenderer {
     if (current) this.#bounds = computeBounds(current);
     this.#tween = undefined;
     this.#applyCamera();
+    // Points and arrows were sized for the previous view; resize them for the new one.
+    const scale = union(this.#bounds, this.#framed).radius;
+    if (this.#model && current && scale !== this.#scale) {
+      this.#scale = scale;
+      this.#graph.setModel(this.#model, current, { scale });
+      this.#graph.setEmphasis(current.highlights, this.#selected);
+    }
     this.#buildGuides();
     this.#requestRender();
   }

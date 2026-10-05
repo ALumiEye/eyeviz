@@ -18,6 +18,7 @@ const ICONS: Record<SceneObjectSpec["type"], string> = {
   plane: "▱",
   curve: "∿",
   surface: "◒",
+  implicit: "◯",
   label: "A",
 };
 
@@ -65,6 +66,7 @@ export function SceneTree({ doc, spec, issues, selection, onSelect, onNotice }: 
     ["vector", t.addVector],
     ["plane", t.addPlane],
     ["graph", t.addGraph],
+    ["implicit", t.addImplicit],
     ["surface", t.addSurface],
     ["label", t.addLabel],
     ["number", t.addNumber],

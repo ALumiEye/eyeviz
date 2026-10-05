@@ -118,6 +118,7 @@ type ObjectState =
   | { type: "vector"; origin: NumberVec3; components: NumberVec3 }
   | { type: "plane"; center: NumberVec3; normal: NumberVec3; extent?: number } // unit normal
   | { type: "curve"; polylines: readonly Float64Array[] } // interleaved x, y, z
+  | { type: "implicit"; polylines: readonly Float64Array[] } // traced F = 0, in z = 0
   | { type: "surface"; rows: number; columns: number; positions: Float64Array } // NaN = undefined
   | { type: "label"; text: string; position: NumberVec3 };
 ```

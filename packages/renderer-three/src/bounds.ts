@@ -51,6 +51,7 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
         include(...object.center);
         break;
       case "curve":
+      case "implicit":
         for (const line of object.polylines) includeAll(line);
         break;
       case "surface":

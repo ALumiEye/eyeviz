@@ -22,6 +22,11 @@ export interface EngineOptions {
   readonly curveSamples?: number;
   /** Samples per side of each surface grid. Default 48, at most 256. Lowered for many surfaces. */
   readonly surfaceSamples?: number;
+  /**
+   * Samples per side of each implicit curve's grid. Default 128, at most 512. Lowered for scenes
+   * with many implicit curves.
+   */
+  readonly implicitSamples?: number;
 }
 
 export const ENGINE_LIMITS = Object.freeze({
@@ -31,6 +36,9 @@ export const ENGINE_LIMITS = Object.freeze({
   defaultSurfaceSamples: 48,
   maxSurfaceSamples: 256,
   maxTotalSurfaceVertices: 250_000,
+  defaultImplicitSamples: 128,
+  maxImplicitSamples: 512,
+  maxTotalImplicitVertices: 250_000,
 });
 
 export type StateListener = (state: SceneState, changed: ReadonlySet<string>) => void;
@@ -53,6 +61,7 @@ export class EyeVizEngine {
 
   readonly #curveSamples: number;
   readonly #surfaceSamples: number;
+  readonly #implicitSamples: number;
   readonly #parameterList: readonly ParameterModel[];
   readonly #listeners = new Set<StateListener>();
   #values: Record<string, number | boolean>;
@@ -75,9 +84,11 @@ export class EyeVizEngine {
 
     let curves = 0;
     let surfaces = 0;
+    let implicits = 0;
     for (const object of this.model.objects.values()) {
       if (object.type === "curve") curves++;
       if (object.type === "surface") surfaces++;
+      if (object.type === "implicit") implicits++;
     }
     const requested = clamp(
       Math.floor(options.curveSamples ?? ENGINE_LIMITS.defaultCurveSamples),
@@ -103,6 +114,21 @@ export class EyeVizEngine {
             ),
           )
         : requestedSurface;
+    const requestedImplicit = clamp(
+      Math.floor(options.implicitSamples ?? ENGINE_LIMITS.defaultImplicitSamples),
+      2,
+      ENGINE_LIMITS.maxImplicitSamples,
+    );
+    this.#implicitSamples =
+      implicits > 0
+        ? Math.max(
+            2,
+            Math.min(
+              requestedImplicit,
+              Math.floor(Math.sqrt(ENGINE_LIMITS.maxTotalImplicitVertices / implicits)),
+            ),
+          )
+        : requestedImplicit;
 
     this.#parameterList = Object.freeze([...this.model.parameters.values()]);
     this.#values = Object.freeze(
@@ -301,6 +327,7 @@ export class EyeVizEngine {
       booleans,
       curveSamples: this.#curveSamples,
       surfaceSamples: this.#surfaceSamples,
+      implicitSamples: this.#implicitSamples,
       stepHidden: step?.hidden ?? NO_IDS,
       objects,
     };

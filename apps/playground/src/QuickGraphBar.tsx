@@ -1,4 +1,10 @@
-import type { SceneObjectSpec, SceneSpec } from "@alumieye/eyeviz";
+import {
+  DEFAULT_IMPLICIT_VARIABLES,
+  type ImplicitSpec,
+  type Scalar,
+  type SceneObjectSpec,
+  type SceneSpec,
+} from "@alumieye/eyeviz";
 import { parseQuickFormula, uniqueId, type SceneDocument } from "@alumieye/eyeviz/authoring";
 import { useId, useState } from "react";
 import { toScalar } from "./editor/visual/fields";
@@ -35,7 +41,9 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
     .map((p) => p.id);
   const preview = input.trim() ? parseQuickFormula(input, known) : undefined;
 
-  const graphs = doc.spec.objects.filter(isGraphOfX);
+  const graphs = doc.spec.objects.filter(
+    (o): o is GraphOfX | ImplicitSpec => isGraphOfX(o) || o.type === "implicit",
+  );
   const selectedGraph = graphs.find((o) => o.id === selected);
   const rangeTargets = selectedGraph ? [selectedGraph] : graphs;
   const editingRange = !input.trim() && rangeTargets.length > 0;
@@ -44,8 +52,9 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
   const [shownGraph, setShownGraph] = useState<string>();
   if (selectedGraph && selectedGraph.id !== shownGraph) {
     setShownGraph(selectedGraph.id);
-    setFrom(String(selectedGraph.domain[0]));
-    setTo(String(selectedGraph.domain[1]));
+    const [start, end] = xRange(selectedGraph);
+    setFrom(String(start));
+    setTo(String(end));
   } else if (!selectedGraph && shownGraph !== undefined) {
     setShownGraph(undefined);
   }
@@ -56,11 +65,16 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
       return setError(t.quickGraphRangeInvalid);
     }
     for (const graph of rangeTargets) {
-      const result = doc.apply({
-        op: "updateObject",
-        id: graph.id,
-        changes: { domain: [domain[0], domain[1]] },
-      });
+      // An equation's curve gets the same range for x and y: a square window.
+      const changes =
+        graph.type === "implicit"
+          ? {
+              domain: Object.fromEntries(
+                (graph.variables ?? DEFAULT_IMPLICIT_VARIABLES).map((v) => [v, [...domain]]),
+              ),
+            }
+          : { domain: [domain[0], domain[1]] };
+      const result = doc.apply({ op: "updateObject", id: graph.id, changes });
       if (!result.ok) return setError(result.error.message);
     }
     setError(undefined);
@@ -71,8 +85,11 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
     if (!preview) return;
     if (!preview.ok) return setError(preview.message);
     const spec = doc.spec;
-    const curveId = uniqueId(spec, "f");
-    const count = spec.objects.filter((o) => o.type === "curve").length;
+    const equation = preview.kind === "equation";
+    const curveId = uniqueId(spec, equation ? "c" : "f");
+    const count = spec.objects.filter((o) => o.type === "curve" || o.type === "implicit").length;
+    const range = [rangeScalar(from), rangeScalar(to)] as const;
+    const color = COLORS[count % COLORS.length] as string;
 
     // New sliders for unknown names, then the curve — each its own undo step.
     for (const name of preview.unknown) {
@@ -91,19 +108,26 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
     }
     if (isEmpty3d(doc.spec))
       doc.apply({ op: "setScene", value: { ...doc.spec.scene, dimension: "2d" } });
-    const result = doc.apply({
-      op: "addObject",
-      object: {
-        id: curveId,
-        type: "curve",
-        // Keep the formula as the author wrote it for display; the spec stores the strict form.
-        name: `y = ${input.trim().replace(/^(y|f\s*\(\s*x\s*\))\s*=\s*/i, "")}`,
-        variable: "x",
-        domain: [rangeScalar(from), rangeScalar(to)],
-        position: ["x", preview.expression, 0],
-        color: COLORS[count % COLORS.length] as string,
-      },
-    });
+    // Keep the formula as the author wrote it for display; the spec stores the strict form.
+    const object: SceneObjectSpec = equation
+      ? {
+          id: curveId,
+          type: "implicit",
+          name: input.trim(),
+          equation: preview.expression,
+          domain: { x: [...range], y: [...range] },
+          color,
+        }
+      : {
+          id: curveId,
+          type: "curve",
+          name: `y = ${input.trim().replace(/^(y|f\s*\(\s*x\s*\))\s*=\s*/i, "")}`,
+          variable: "x",
+          domain: [...range],
+          position: ["x", preview.expression, 0],
+          color,
+        };
+    const result = doc.apply({ op: "addObject", object });
     if (!result.ok) return setError(result.error.message);
     setError(undefined);
     setInput("");
@@ -123,8 +147,9 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
         {t.quickGraph}
       </label>
       <div className="quick-graph-row">
+        {/* An equation carries its own "=". */}
         <span className="quick-graph-y" aria-hidden="true">
-          y =
+          {input.includes("=") ? "" : "y ="}
         </span>
         <input
           id={id}
@@ -184,11 +209,18 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
   );
 }
 
+type GraphOfX = Extract<SceneObjectSpec, { type: "curve" }>;
+
 /** A graph of y in x, as quick graph draws it: a curve whose x coordinate is its variable. */
-function isGraphOfX(
-  object: SceneObjectSpec,
-): object is Extract<SceneObjectSpec, { type: "curve" }> {
+function isGraphOfX(object: SceneObjectSpec): object is GraphOfX {
   return object.type === "curve" && object.position[0] === object.variable;
+}
+
+/** The horizontal range of a graph or an equation's curve. */
+function xRange(graph: GraphOfX | ImplicitSpec): readonly [Scalar, Scalar] {
+  if (graph.type === "curve") return graph.domain;
+  const [x] = graph.variables ?? DEFAULT_IMPLICIT_VARIABLES;
+  return graph.domain[x] ?? [-5, 5];
 }
 
 /** A range bound; accepts a decimal comma (`-2,5`). */
