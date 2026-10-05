@@ -100,6 +100,12 @@ discontinuity detection.
 - [x] New 2D/3D scenes, autosaved draft, stable default framing for new scenes
 - [x] Quick graph: type `y = 3x² − 2sin x` as on paper (`parseQuickFormula` in authoring turns
       it into the strict form; unknown letters become sliders); "Fit view" button
+- [x] Quick graph reads textbook notation: `sin²x`, `sin x²` = `sin(x²)`, `sin ax`, decimal
+      commas (`1,5x`; `;` separates arguments), `tg`/`cotg`/`lg`/`ln`/`arcsin`…; `cot`, `lg`
+      and `arccot` are written out in the strict language; unsupported functions (`mod`,
+      `sec`…) are reported instead of becoming sliders
+- [x] Quick graph x range also edits existing graphs: with the formula empty, "Apply" changes the
+      selected graph's range (or every graph of y in x) and fits the view
 
 Not yet: object type conversion, multi-select, copy/paste, a formula palette.
 

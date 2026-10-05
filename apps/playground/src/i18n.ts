@@ -161,7 +161,7 @@ const en = {
   factAt: "at",
   // Quick graph
   quickGraph: "Quick graph",
-  quickGraphPlaceholder: "e.g. x^3 - 3x   ·   2sin x   ·   ax^2 + bx + c",
+  quickGraphPlaceholder: "e.g. x^3 - 3x   ·   2sin²x   ·   ax^2 + bx + c",
   quickGraphFrom: "x from",
   quickGraphTo: "to",
   quickGraphDraw: "Draw",
@@ -169,6 +169,13 @@ const en = {
   quickGraphNewSliders: (names: string) => `new sliders: ${names}`,
   quickGraphAdded: (sliders: string) =>
     sliders ? `Graph added, with sliders ${sliders}` : "Graph added",
+  quickGraphApply: "Apply",
+  quickGraphRangeHint: (count: number) =>
+    count === 1
+      ? "Change the x range and press Apply to redraw the selected graph."
+      : `Change the x range and press Apply to redraw all ${count} graphs (select one to change only it).`,
+  quickGraphRangeInvalid: "'x from' must be a number smaller than 'to'.",
+  quickGraphRangeApplied: (from: string, to: string) => `x range set to ${from} … ${to}`,
 } as const;
 
 type Dictionary = {
@@ -326,7 +333,7 @@ const vi: Dictionary = {
   factGrid: (rows, columns) => `lưới ${rows} × ${columns}`,
   factAt: "tại",
   quickGraph: "Vẽ nhanh",
-  quickGraphPlaceholder: "ví dụ: x^3 - 3x   ·   2sin x   ·   ax^2 + bx + c",
+  quickGraphPlaceholder: "ví dụ: x^3 - 3x   ·   2sin²x   ·   1,5x^2 + bx + c",
   quickGraphFrom: "x từ",
   quickGraphTo: "đến",
   quickGraphDraw: "Vẽ",
@@ -334,6 +341,13 @@ const vi: Dictionary = {
   quickGraphNewSliders: (names) => `thanh trượt mới: ${names}`,
   quickGraphAdded: (sliders) =>
     sliders ? `Đã vẽ đồ thị, thêm thanh trượt ${sliders}` : "Đã vẽ đồ thị",
+  quickGraphApply: "Áp dụng",
+  quickGraphRangeHint: (count) =>
+    count === 1
+      ? "Sửa khoảng x rồi bấm Áp dụng để vẽ lại đồ thị đang chọn."
+      : `Sửa khoảng x rồi bấm Áp dụng để vẽ lại cả ${count} đồ thị (chọn một đồ thị để chỉ đổi nó).`,
+  quickGraphRangeInvalid: "'x từ' phải là số nhỏ hơn 'đến'.",
+  quickGraphRangeApplied: (from, to) => `Đã đổi khoảng x thành ${from} … ${to}`,
 };
 
 const dictionaries: Record<Language, Dictionary> = { en: en as unknown as Dictionary, vi };

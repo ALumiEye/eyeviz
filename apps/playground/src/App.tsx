@@ -417,9 +417,15 @@ export function App() {
           <div className="visual-center">
             <QuickGraphBar
               doc={doc}
+              selected={selectedObject}
               onAdded={(id, sliders) => {
                 setSelection({ kind: "object", id });
                 setNotice(t.quickGraphAdded(sliders.join(", ")));
+              }}
+              onRangeApplied={(from, to) => {
+                setNotice(t.quickGraphRangeApplied(from, to));
+                // Frame the new range once the renderer has the updated scene.
+                requestAnimationFrame(() => sceneRef.current?.resetView());
               }}
             />
             {preview}
