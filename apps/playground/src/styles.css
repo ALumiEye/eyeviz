@@ -906,6 +906,10 @@ button.danger-outline {
   --contains-highlight-background-color: transparent;
 }
 
+.quick-graph-math math-field::part(menu-toggle) {
+  display: none;
+}
+
 .quick-graph-math:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 1px;

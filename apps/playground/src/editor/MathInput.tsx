@@ -36,24 +36,34 @@ export function MathInput(props: Props) {
       ({ MathfieldElement }) => {
         const container = host.current;
         if (cancelled || !container) return;
-        MathfieldElement.decimalSeparator = latest.current.decimalSeparator;
-        const mf = new MathfieldElement();
-        mf.smartFence = true;
-        mf.mathVirtualKeyboardPolicy = "auto";
-        mf.value = latest.current.value;
-        mf.addEventListener("input", () => latest.current.onChange(mf.value));
-        mf.addEventListener(
-          "keydown",
-          (event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            latest.current.onSubmit();
-          },
-          { capture: true },
-        );
-        container.replaceChildren(mf);
-        field.current = mf;
-        setReady(true);
+        try {
+          MathfieldElement.decimalSeparator = latest.current.decimalSeparator;
+          const mf = new MathfieldElement();
+          mf.smartFence = true;
+          mf.mathVirtualKeyboardPolicy = "auto";
+          mf.value = latest.current.value;
+          mf.addEventListener("input", () => latest.current.onChange(mf.value));
+          mf.addEventListener(
+            "keydown",
+            (event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              latest.current.onSubmit();
+            },
+            { capture: true },
+          );
+          container.replaceChildren(mf);
+          // After mounting (MathLive requires it): its menu offers matrices, colours and text
+          // modes that formulas cannot use, and its button does not close the menu on a
+          // second click — leave it out.
+          mf.menuItems = [];
+          field.current = mf;
+          setReady(true);
+        } catch (error) {
+          console.error("[EyeViz] The formula editor could not start.", error);
+          container.replaceChildren();
+          latest.current.onUnavailable();
+        }
       },
       () => {
         if (!cancelled) latest.current.onUnavailable();
