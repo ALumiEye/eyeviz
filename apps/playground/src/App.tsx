@@ -14,9 +14,9 @@ import { lineColumn, locate, type TextRange } from "./editor/locate";
 import { SpecEditor } from "./editor/SpecEditor";
 import { Inspector, type Selection } from "./editor/visual/Inspector";
 import { SceneTree } from "./editor/visual/SceneTree";
-import { EXAMPLES } from "./examples";
+import { EXAMPLES, exampleTitle, localizeExample } from "./examples";
 import { formatJson } from "./format";
-import { setLanguage, useT, type Language } from "./i18n";
+import { getLanguage, setLanguage, useT, type Language } from "./i18n";
 import { ParameterControls } from "./ParameterControls";
 import { QuickGraphBar } from "./QuickGraphBar";
 import { SelectionPanel } from "./SelectionPanel";
@@ -66,9 +66,11 @@ function readDraft(): { exampleId: string; spec: SceneSpec } | undefined {
   }
 }
 
-function exampleSpec(id: string): SceneSpec | undefined {
+/** An example in `language` (its text is translated; the scene is the same). */
+function exampleSpec(id: string, language: Language = getLanguage()): SceneSpec | undefined {
   const example = EXAMPLES.find((e) => e.id === id);
-  return example ? analyze(example.text).spec : undefined;
+  const spec = example ? analyze(example.text).spec : undefined;
+  return spec ? localizeExample(spec, language) : undefined;
 }
 
 const draft = readDraft();
@@ -124,7 +126,7 @@ export function App() {
     return result.ok ? [] : result.issues;
   }, [spec]);
   const text = mode === "json" ? jsonText : visualText;
-  const issueList =
+  const issueList = (
     mode === "json" && jsonAnalysis
       ? jsonAnalysis.issues
       : visualIssues.map((issue) => ({
@@ -132,7 +134,8 @@ export function App() {
           message: issue.message,
           path: issue.path,
           range: locate(visualText, issue.path),
-        }));
+        }))
+  ).map((issue) => ({ ...issue, message: t.issue(issue.message) }));
   const jsonBlocked = mode === "json" && jsonAnalysis !== undefined && !jsonAnalysis.spec;
 
   const loadSpec = (next: SceneSpec, id: string) => {
@@ -151,6 +154,16 @@ export function App() {
       return loadSpec(emptyScene(id === "new2d" ? "2d" : "3d"), "");
     const next = exampleSpec(id);
     if (next) loadSpec(next, id);
+  };
+
+  // An example left as loaded follows the language; an edited scene is the author's and stays.
+  const changeLanguage = (next: Language) => {
+    const shown = exampleId ? exampleSpec(exampleId, t.language) : undefined;
+    setLanguage(next);
+    const translated = exampleSpec(exampleId, next);
+    if (shown && translated && formatJson(shown) === formatJson(doc.spec)) {
+      loadSpec(translated, exampleId);
+    }
   };
 
   const switchMode = (next: Mode) => {
@@ -360,7 +373,7 @@ export function App() {
               <option value="new3d">＋ {t.newScene3d}</option>
               {EXAMPLES.map((example) => (
                 <option key={example.id} value={example.id}>
-                  {example.title}
+                  {exampleTitle(example, t.language)}
                 </option>
               ))}
             </select>
@@ -389,7 +402,7 @@ export function App() {
             <span className="visually-hidden">{t.language}</span>
             <select
               value={t.language}
-              onChange={(event) => setLanguage(event.target.value as Language)}
+              onChange={(event) => changeLanguage(event.target.value as Language)}
             >
               <option value="vi">Tiếng Việt</option>
               <option value="en">English</option>

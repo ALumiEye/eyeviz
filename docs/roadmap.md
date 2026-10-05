@@ -106,6 +106,8 @@ discontinuity detection.
       `sec`…) are reported instead of becoming sliders
 - [x] Quick graph x range also edits existing graphs: with the formula empty, "Apply" changes the
       selected graph's range (or every graph of y in x) and fits the view
+- [x] Vietnamese error messages in the playground (issues, edit errors, quick graph; unknown
+      messages fall back to English) and Vietnamese text for the bundled examples
 
 Not yet: object type conversion, multi-select, copy/paste, a formula palette.
 

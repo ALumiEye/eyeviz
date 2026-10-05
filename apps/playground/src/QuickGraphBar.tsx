@@ -171,11 +171,11 @@ export function QuickGraphBar({ doc, selected, onAdded, onRangeApplied }: Props)
         className={error ? "field-error" : "field-hint"}
         role={error ? "alert" : undefined}
       >
-        {error ??
+        {t.issue(error ?? "") ||
           (preview?.ok
             ? `→ ${preview.expression}${preview.unknown.length ? ` · ${t.quickGraphNewSliders(preview.unknown.join(", "))}` : ""}`
             : preview
-              ? preview.message
+              ? t.issue(preview.message)
               : editingRange
                 ? t.quickGraphRangeHint(rangeTargets.length)
                 : t.quickGraphHint)}

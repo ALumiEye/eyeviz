@@ -11,10 +11,11 @@ export function issuesAt(issues: readonly EyeVizIssue[], path: string): EyeVizIs
 }
 
 function IssueText({ issues }: { issues: readonly EyeVizIssue[] }) {
+  const t = useT();
   if (issues.length === 0) return null;
   return (
     <span className="field-error" role="alert">
-      {issues[0]?.message}
+      {t.issue(issues[0]?.message ?? "")}
     </span>
   );
 }
@@ -140,6 +141,7 @@ export function CommitInput({
   hint?: string;
   error?: string | undefined;
 }) {
+  const t = useT();
   const id = useId();
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
@@ -176,7 +178,7 @@ export function CommitInput({
       {hint && !message ? <span className="field-hint">{hint}</span> : null}
       {message ? (
         <span className="field-error" role="alert">
-          {message}
+          {t.issue(message)}
         </span>
       ) : null}
     </div>
@@ -343,7 +345,7 @@ export function DeleteButton({ onDelete, error }: { onDelete: () => void; error?
       )}
       {error ? (
         <span className="field-error" role="alert">
-          {error}
+          {t.issue(error)}
         </span>
       ) : null}
     </div>

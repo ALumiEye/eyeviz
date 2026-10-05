@@ -1,8 +1,10 @@
 /**
  * Tiny i18n for the playground UI (Vietnamese default, English). No library: a dictionary,
- * a store and a hook. Scene content (titles, labels) is never translated — it is the author's.
+ * a store and a hook. Scene content (titles, labels) is the author's and is not translated; only
+ * the bundled examples come in Vietnamese (examples-vi.ts).
  */
 import { useSyncExternalStore } from "react";
+import { toVietnamese } from "./issue-messages";
 
 export type Language = "vi" | "en";
 
@@ -176,6 +178,8 @@ const en = {
       : `Change the x range and press Apply to redraw all ${count} graphs (select one to change only it).`,
   quickGraphRangeInvalid: "'x from' must be a number smaller than 'to'.",
   quickGraphRangeApplied: (from: string, to: string) => `x range set to ${from} … ${to}`,
+  /** Wording of an issue or edit-error message (the libraries report in English). */
+  issue: (message: string) => message,
 } as const;
 
 type Dictionary = {
@@ -348,6 +352,7 @@ const vi: Dictionary = {
       : `Sửa khoảng x rồi bấm Áp dụng để vẽ lại cả ${count} đồ thị (chọn một đồ thị để chỉ đổi nó).`,
   quickGraphRangeInvalid: "'x từ' phải là số nhỏ hơn 'đến'.",
   quickGraphRangeApplied: (from, to) => `Đã đổi khoảng x thành ${from} … ${to}`,
+  issue: toVietnamese,
 };
 
 const dictionaries: Record<Language, Dictionary> = { en: en as unknown as Dictionary, vi };
@@ -365,6 +370,11 @@ function initialLanguage(): Language {
 
 let current: Language = initialLanguage();
 const listeners = new Set<() => void>();
+
+/** The current language, for code outside components. */
+export function getLanguage(): Language {
+  return current;
+}
 
 export function setLanguage(language: Language): void {
   current = language;

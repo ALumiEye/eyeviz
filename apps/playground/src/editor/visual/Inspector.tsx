@@ -429,7 +429,7 @@ function RangeInput({
         .filter((i) => i.path === path)
         .map((i) => (
           <span key={i.message} className="field-error" role="alert">
-            {i.message}
+            {t.issue(i.message)}
           </span>
         ))}
     </fieldset>
@@ -685,7 +685,7 @@ function ParameterForm({
       />
       {issuesAt(issues, path).map((i) => (
         <span key={i.path + i.message} className="field-error" role="alert">
-          {i.message}
+          {t.issue(i.message)}
         </span>
       ))}
       <DeleteButton
