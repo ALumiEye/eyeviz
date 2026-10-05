@@ -1,15 +1,17 @@
 import Editor, { loader, type OnMount } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import type * as MonacoApi from "monaco-editor";
+import * as monaco from "./monaco-lean.js";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import JsonWorker from "monaco-editor/language/json/json.worker.js?worker";
 import { useEffect, useRef, useState } from "react";
 import type { SpecEditorProps } from "./types";
 
-// Bundle Monaco locally (no CDN): the playground must work offline and on static hosting.
+// Bundle a lean Monaco locally (no CDN): the playground must work offline and on static
+// hosting, and only needs the JSON language.
 self.MonacoEnvironment = {
   getWorker: (_workerId, label) => (label === "json" ? new JsonWorker() : new EditorWorker()),
 };
-loader.config({ monaco });
+loader.config({ monaco: monaco as unknown as typeof MonacoApi });
 
 const SCHEMA_URI = "inmemory://eyeviz/scene-spec-0.1.schema.json";
 const MARKER_OWNER = "eyeviz";

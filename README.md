@@ -12,6 +12,9 @@ _From equations to interactive visualizations._
 > motion over time, step-by-step explanations, selection and draggable points. Nothing is
 > published to npm yet; all APIs are **experimental**.
 
+**Try it:** [alumieye.github.io/eyeviz](https://alumieye.github.io/eyeviz/) — the playground
+runs entirely in your browser (visual editor in Vietnamese or English, or JSON).
+
 ## What EyeViz is
 
 EyeViz turns a structured description of a mathematical or scientific model — a

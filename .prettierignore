@@ -3,3 +3,4 @@ coverage/
 pnpm-lock.yaml
 LICENSE
 INIT.md
+apps/playground/src/editor/monaco-lean.js
