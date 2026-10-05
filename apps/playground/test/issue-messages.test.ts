@@ -1,5 +1,10 @@
 import { compileScene, EyeVizEngine, validateSpec } from "@alumieye/eyeviz";
-import { applyCommand, parseQuickFormula, type EditCommand } from "@alumieye/eyeviz/authoring";
+import {
+  applyCommand,
+  latexToFormula,
+  parseQuickFormula,
+  type EditCommand,
+} from "@alumieye/eyeviz/authoring";
 import { describe, expect, it } from "vitest";
 import { hasVietnamese, toVietnamese } from "../src/issue-messages";
 
@@ -132,6 +137,19 @@ describe("Vietnamese issue messages", () => {
       if (!result.ok) expect(hasVietnamese(result.message), result.message).toBe(true);
     },
   );
+
+  it.each([
+    "",
+    "\\frac{1}{\\placeholder{}}",
+    "x^",
+    "\\int x",
+    "\\frac{1}{x",
+    "\\left\\langle x\\right\\rangle",
+  ])("translates the formula field message for %s", (latex) => {
+    const result = latexToFormula(latex);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(hasVietnamese(result.message), result.message).toBe(true);
+  });
 
   it("keeps the details of a message", () => {
     expect(toVietnamese("Unknown symbol 'k' in expression \"k*x\". Did you mean 'a'?")).toBe(

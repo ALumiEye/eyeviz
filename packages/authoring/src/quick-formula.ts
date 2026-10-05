@@ -86,6 +86,7 @@ const SYMBOLS: readonly [RegExp, string][] = [
   [/²/g, "^2"],
   [/³/g, "^3"],
   [/π/g, "pi"],
+  [/∛/g, " cbrt "],
   [/√/g, " sqrt "],
   [/θ/g, " theta "],
   [/φ|ϕ/g, " phi "],

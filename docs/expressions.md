@@ -37,17 +37,18 @@ on host objects happens anywhere.
 
 ## Grammar (v0.1)
 
-| Element   | Supported                                                              |
-| --------- | ---------------------------------------------------------------------- |
-| Numbers   | `2`, `0.5`, `1e-3`                                                     |
-| Operators | `+`, `-`, `*`, `/`, `^` (power, right-associative), unary `-` and `+`  |
-| Grouping  | `( … )`                                                                |
-| Functions | `sin cos tan asin acos atan atan2 sqrt exp log abs min max floor ceil` |
-| Constants | `pi`, `e`                                                              |
-| Variables | number parameter IDs, `t`, the curve `variable`                        |
+| Element   | Supported                                                                        |
+| --------- | -------------------------------------------------------------------------------- |
+| Numbers   | `2`, `0.5`, `1e-3`                                                               |
+| Operators | `+`, `-`, `*`, `/`, `^` (power, right-associative), unary `-` and `+`            |
+| Grouping  | `( … )`                                                                          |
+| Functions | `sin cos tan asin acos atan atan2 sqrt cbrt root exp log abs min max floor ceil` |
+| Constants | `pi`, `e`                                                                        |
+| Variables | number parameter IDs, `t`, the curve `variable`                                  |
 
 `log(x)` is the natural logarithm. `atan2(y, x)` follows `Math.atan2`. `min`/`max` take two
-or more arguments.
+or more arguments. `cbrt(x)` is the cube root and `root(x, n)` the n-th root; both are defined
+for negative `x` when the root is odd (`cbrt(-8) = -2`, `root(-32, 5) = -2`), unlike `x^(1/3)`.
 
 ## Explicitly rejected
 

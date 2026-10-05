@@ -881,6 +881,45 @@ button.danger-outline {
   border-color: var(--error);
 }
 
+/* Formula field (MathLive): the host keeps the input's frame; the field fills it. */
+.quick-graph-math {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 4px;
+}
+
+.quick-graph-math:has(math-field[aria-invalid="true"]) {
+  border-color: var(--error);
+}
+
+.quick-graph-math math-field {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  --caret-color: var(--fg);
+  --selection-background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  --contains-highlight-background-color: transparent;
+}
+
+.quick-graph-math:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.quick-graph-mode {
+  min-width: 40px;
+  font:
+    600 13px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
 .quick-graph-range {
   display: inline-flex;
   align-items: center;

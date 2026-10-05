@@ -291,6 +291,20 @@ const RULES: readonly Rule[] = [
     (problem) => `Lỗi cú pháp JSON: ${JSON_PROBLEMS[problem] ?? problem}`,
   ],
 
+  // ── Formula field (authoring latexToFormula) ──
+  [/^The formula is empty$/, () => "Công thức đang trống"],
+  [
+    /^The formula is incomplete: fill in every box$/,
+    () => "Công thức chưa xong: hãy điền vào mọi ô trống",
+  ],
+  [/^The formula is incomplete$/, () => "Công thức chưa xong"],
+  [
+    /^'(.+)' is not supported in formulas$/,
+    (command) => `Chưa hỗ trợ ký hiệu '${command}' trong công thức`,
+  ],
+  [/^Unbalanced braces in the formula$/, () => "Công thức bị thiếu hoặc thừa dấu ngoặc"],
+  [/^This kind of bracket is not supported in formulas$/, () => "Chưa hỗ trợ loại ngoặc này"],
+
   // ── Zod defaults (spec schema) ──
   [
     /^Invalid input: expected (\w+), received (\w+)$/,

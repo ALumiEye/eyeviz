@@ -18,7 +18,7 @@ import { EXAMPLES, exampleTitle, localizeExample } from "./examples";
 import { formatJson } from "./format";
 import { getLanguage, setLanguage, useT, type Language } from "./i18n";
 import { ParameterControls } from "./ParameterControls";
-import { QuickGraphBar } from "./QuickGraphBar";
+import { QuickGraphBar, type QuickGraphAddition } from "./QuickGraphBar";
 import { SelectionPanel } from "./SelectionPanel";
 import { StepsBar } from "./StepsBar";
 import { TimelineBar } from "./TimelineBar";
@@ -253,6 +253,21 @@ export function App() {
   };
 
   const selectedObject = selection?.kind === "object" ? selection.id : null;
+
+  // The graph being typed in quick graph is shown before it is added (not part of the document,
+  // so it leaves no undo step). If it does not compile, the scene shows without it.
+  const [graphDraft, setGraphDraft] = useState<QuickGraphAddition>();
+  const shownEngine = useMemo(() => {
+    if (!graphDraft || !engine) return engine;
+    const empty3d = spec.objects.length === 0 && (spec.scene?.dimension ?? "3d") === "3d";
+    const result = compileScene({
+      ...spec,
+      ...(empty3d ? { scene: { ...spec.scene, dimension: "2d" } } : {}),
+      parameters: [...(spec.parameters ?? []), ...graphDraft.parameters],
+      objects: [...spec.objects, graphDraft.object],
+    });
+    return result.ok ? createEngine(result.model, engine) : engine;
+  }, [graphDraft, engine, spec]);
   const stale = issueList.length > 0 && engine !== null;
 
   const preview = (
@@ -270,7 +285,7 @@ export function App() {
         {engine ? (
           <EyeVizScene
             ref={sceneRef}
-            engine={engine}
+            engine={shownEngine}
             selected={selectedObject}
             onSelect={(id) => setSelection(id ? { kind: "object", id } : null)}
             dragMode={mode === "visual" ? "all" : "declared"}
@@ -293,7 +308,7 @@ export function App() {
         />
       ) : null}
       {engine ? <StepsBar engine={engine} /> : null}
-      {engine?.model.animated ? <TimelineBar engine={engine} /> : null}
+      {shownEngine?.model.animated ? <TimelineBar engine={shownEngine} /> : null}
     </section>
   );
 
@@ -345,7 +360,7 @@ export function App() {
       <h2 id="controls-title" className="pane-title">
         {t.parameters}
       </h2>
-      {engine ? <ParameterControls engine={engine} /> : null}
+      {shownEngine ? <ParameterControls engine={shownEngine} /> : null}
     </section>
   );
 
@@ -438,6 +453,7 @@ export function App() {
                 setSelection({ kind: "object", id });
                 setNotice(t.quickGraphAdded(sliders.join(", ")));
               }}
+              onDraft={setGraphDraft}
               onRangeApplied={(from, to) => {
                 setNotice(t.quickGraphRangeApplied(from, to));
                 // Frame the new range once the renderer has the updated scene.

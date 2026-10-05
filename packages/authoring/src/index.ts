@@ -31,3 +31,4 @@ export {
   type NewItemKind,
 } from "./templates";
 export { parseQuickFormula, type QuickFormulaResult } from "./quick-formula";
+export { latexToFormula, type LatexResult } from "./latex";

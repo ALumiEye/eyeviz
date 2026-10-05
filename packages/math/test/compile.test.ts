@@ -64,6 +64,7 @@ describe("functions and constants", () => {
 
   it("exposes the whitelist", () => {
     expect(SUPPORTED_FUNCTIONS).toContain("sin");
+    expect(SUPPORTED_FUNCTIONS).toEqual(expect.arrayContaining(["cbrt", "root"]));
     expect(SUPPORTED_CONSTANTS).toEqual(["pi", "e"]);
   });
 
@@ -200,5 +201,24 @@ describe("limits", () => {
   it("rejects excessive nesting", () => {
     const issue = rejection("(".repeat(40) + "1" + ")".repeat(40));
     expect(issue).toMatchObject({ code: "LIMIT_EXCEEDED", details: { limit: "maxDepth" } });
+  });
+});
+
+describe("roots", () => {
+  const value = (source: string) => {
+    const result = compileExpression(source);
+    if (!result.ok) throw new Error(result.issue.message);
+    return result.expression.evaluate({});
+  };
+
+  it("takes cube roots of negative numbers", () => {
+    expect(value("cbrt(-8)")).toBeCloseTo(-2);
+    expect(value("cbrt(27)")).toBeCloseTo(3);
+  });
+
+  it("takes odd roots of negative numbers and leaves even roots undefined there", () => {
+    expect(value("root(-32, 5)")).toBeCloseTo(-2);
+    expect(value("root(16, 4)")).toBeCloseTo(2);
+    expect(value("root(-16, 4)")).toBeNaN();
   });
 });

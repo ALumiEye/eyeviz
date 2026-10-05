@@ -15,6 +15,7 @@
     "@alumieye/eyeviz": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
     "jsonc-parser": "^3.3.1",
+    "mathlive": "^0.111.0",
     "monaco-editor": "^0.57.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

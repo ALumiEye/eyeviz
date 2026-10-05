@@ -177,6 +177,10 @@ const en = {
   quickGraphAdded: (sliders: string) =>
     sliders ? `Graph added, with sliders ${sliders}` : "Graph added",
   quickGraphApply: "Apply",
+  quickGraphMathHint:
+    "Type as on paper: / makes a fraction, ^ a power, sqrt a root. The graph appears as you type; Enter keeps it.",
+  quickGraphUseText: "Type as plain text",
+  quickGraphUseMath: "Type in the formula editor",
   quickGraphRangeHint: (count: number) =>
     count === 1
       ? "Change the x range and press Apply to redraw the selected graph."
@@ -356,6 +360,10 @@ const vi: Dictionary = {
   quickGraphAdded: (sliders) =>
     sliders ? `Đã vẽ đồ thị, thêm thanh trượt ${sliders}` : "Đã vẽ đồ thị",
   quickGraphApply: "Áp dụng",
+  quickGraphMathHint:
+    "Gõ như viết trên giấy: / thành phân số, ^ lên số mũ, sqrt thành căn. Đồ thị hiện ngay khi gõ; Enter để giữ lại.",
+  quickGraphUseText: "Gõ dạng chữ",
+  quickGraphUseMath: "Gõ bằng ô công thức",
   quickGraphRangeHint: (count) =>
     count === 1
       ? "Sửa khoảng x rồi bấm Áp dụng để vẽ lại đồ thị đang chọn."

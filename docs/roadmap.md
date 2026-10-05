@@ -110,7 +110,11 @@ discontinuity detection.
 - [x] Vietnamese error messages in the playground (issues, edit errors, quick graph; unknown
       messages fall back to English) and Vietnamese text for the bundled examples
 
-Not yet: object type conversion, multi-select, copy/paste, a formula palette.
+- [x] Formula editor in quick graph: MathLive field (√, powers, fractions as in a textbook;
+      virtual keyboard on touch devices), loaded on demand; LaTeX → formula in authoring
+      (`latexToFormula`); the graph is previewed while typing, Enter keeps it; `cbrt`, `root`
+
+Not yet: object type conversion, multi-select, copy/paste, the formula editor in the inspector.
 
 ## Phase 7 — Advanced STEM (in progress)
 
