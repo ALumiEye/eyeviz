@@ -108,7 +108,7 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
     className,
     style,
   } = props;
-  const { theme, axes, grid, background, maxPixelRatio, autoplay } = props;
+  const { theme, axes, grid, background, maxPixelRatio, autoplay, coordinates } = props;
 
   const own = useEyeViz(externalEngine === undefined ? spec : null, engineOptions);
   const engine = externalEngine === undefined ? own.engine : externalEngine;
@@ -124,7 +124,9 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
   const engineRef = useRef(engine);
   const draggableRef = useRef(props.draggable ?? true);
   const onDragPointRef = useRef(props.onDragPoint);
+  const formatCoordinatesRef = useRef(props.formatCoordinates);
   useEffect(() => {
+    formatCoordinatesRef.current = props.formatCoordinates;
     onSelectRef.current = props.onSelect;
     engineRef.current = engine;
     draggableRef.current = props.draggable ?? true;
@@ -159,7 +161,7 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
 
     const start = () => {
       import("@alumieye/eyeviz-renderer-three").then(
-        ({ ThreeRenderer }) => {
+        ({ ThreeRenderer, formatCoordinates }) => {
           if (cancelled) return;
           const options: ThreeRendererOptions = {
             ...(theme !== undefined ? { theme } : {}),
@@ -167,9 +169,15 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
             ...(grid !== undefined ? { grid } : {}),
             ...(background !== undefined ? { background } : {}),
             ...(maxPixelRatio !== undefined ? { maxPixelRatio } : {}),
+            ...(coordinates !== undefined ? { coordinates } : {}),
           };
           try {
-            instance = createRenderer(ThreeRenderer, options);
+            instance = createRenderer(ThreeRenderer, {
+              ...options,
+              // The latest formatter, without recreating the renderer when it changes.
+              formatCoordinates: (position, decimals) =>
+                (formatCoordinatesRef.current ?? formatCoordinates)(position, decimals),
+            });
           } catch (error) {
             // No WebGL (old device, disabled GPU): retrying will not help.
             return giveUp(error);
@@ -230,7 +238,7 @@ export function EyeVizScene({ ref, ...props }: EyeVizSceneProps) {
       instance?.dispose();
       setRenderer(null);
     };
-  }, [lazy, theme, axes, grid, background, maxPixelRatio]);
+  }, [lazy, theme, axes, grid, background, maxPixelRatio, coordinates]);
 
   // Connect the current engine. A new engine replaces the model without a new WebGL context.
   useEffect(() => {

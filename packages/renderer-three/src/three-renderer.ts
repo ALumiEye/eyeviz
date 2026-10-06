@@ -2,10 +2,12 @@ import type { SceneModel, SceneRenderer, SceneState } from "@alumieye/eyeviz-cor
 import type { NumberVec3 } from "@alumieye/eyeviz-spec";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
+import { CSS2DRenderer, type CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { buildGuides, disposeGuides, type GuideRegion } from "./axes";
 import { computeBounds, defaultCameraPosition, niceStep, type Bounds } from "./bounds";
 import { prefersReducedMotion } from "./browser";
+import { coordinateDecimals, formatCoordinates, nearestOnScene } from "./hover";
+import { applyLabelStyle, createLabel } from "./labels";
 import { SceneGraph } from "./scene-graph";
 import { PALETTES, resolveTheme, type Palette, type ThemeOption } from "./theme";
 
@@ -31,6 +33,16 @@ export interface ThreeRendererOptions {
    * Without this callback, points cannot be dragged.
    */
   readonly onDrag?: (id: string, target: NumberVec3) => void;
+  /**
+   * In 2D, show the coordinates of the point under the pointer on graphs and points, with a
+   * marker. Default `true`.
+   */
+  readonly coordinates?: boolean;
+  /**
+   * Text for those coordinates; `decimals` suits the current zoom. Default `(x, y)`, e.g.
+   * `(1.25, −0.5)`. A Vietnamese page may show `(1,25; −0,5)`.
+   */
+  readonly formatCoordinates?: (position: NumberVec3, decimals: number) => string;
 }
 
 interface CameraTween {
@@ -82,6 +94,9 @@ export class ThreeRenderer implements SceneRenderer {
   /** In 2D: the area the current guides cover; they are rebuilt when the view leaves it. */
   #guideRegion: GuideRegion | undefined;
   #axisNames: THREE.Object3D[] = [];
+  /** Pointer position (normalized device coordinates) while it hovers the canvas. */
+  #pointer: THREE.Vector2 | undefined;
+  #hover: { readonly marker: THREE.Mesh; readonly label: CSS2DObject } | undefined;
   #dimension: Dimension = "3d";
   #halfHeight = 1;
   #cameraKey: string | undefined;
@@ -142,6 +157,8 @@ export class ThreeRenderer implements SceneRenderer {
     this.#controls.dampingFactor = 0.12;
     // Listeners on the controls object die with it; its DOM listeners go in controls.dispose().
     this.#controls.addEventListener("change", () => this.#requestRender());
+    // Panning or zooming moves the scene under the pointer: hide the coordinates until it moves.
+    this.#controls.addEventListener("start", () => this.#hideHover());
 
     this.#scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f98, 1.6));
     const sun = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -180,7 +197,7 @@ export class ThreeRenderer implements SceneRenderer {
     this.#state = state;
     this.#updateDraggable();
     this.#tween = undefined;
-    this.#bounds = computeBounds(state);
+    this.#bounds = computeBounds(state, undefined, model.scene.dimension);
     this.#setDimension(model.scene.dimension);
 
     // Keep the user's view while editing a spec. Reframe for a new camera definition, or when
@@ -216,6 +233,7 @@ export class ThreeRenderer implements SceneRenderer {
     const previous = this.#state;
     this.#state = state;
     this.#graph.update(state, changed);
+    this.#updateHover(); // the graph under the pointer may have changed
     if (previous?.highlights !== state.highlights)
       this.#graph.setEmphasis(state.highlights, this.#selected);
     if (previous?.focus !== state.focus && state.focus.length > 0) this.#focusOn(state, true);
@@ -255,7 +273,7 @@ export class ThreeRenderer implements SceneRenderer {
    */
   resetCamera(state?: SceneState): void {
     const current = state ?? this.#state;
-    if (current) this.#bounds = computeBounds(current);
+    if (current) this.#bounds = computeBounds(current, undefined, this.#dimension);
     this.#tween = undefined;
     this.#applyCamera();
     // Points and arrows were sized for the previous view; resize them for the new one.
@@ -328,7 +346,7 @@ export class ThreeRenderer implements SceneRenderer {
 
   /** Moves the camera to frame the state's `focus` objects, keeping the viewing direction. */
   #focusOn(state: SceneState, animate: boolean): void {
-    const bounds = computeBounds(state, new Set(state.focus));
+    const bounds = computeBounds(state, new Set(state.focus), this.#dimension);
     const target = new THREE.Vector3(...bounds.center);
     let position: THREE.Vector3;
     let halfHeight = this.#halfHeight;
@@ -449,7 +467,13 @@ export class ThreeRenderer implements SceneRenderer {
         if (hit) this.#options.onDrag?.(dragging.id, [hit.x, hit.y, hit.z]);
         return;
       }
-      if (event.buttons === 0) canvas.style.cursor = draggableAt(event) ? "grab" : "";
+      if (event.buttons === 0) {
+        canvas.style.cursor = draggableAt(event) ? "grab" : "";
+        this.#pointer = pointerAt(event).ndc;
+        this.#updateHover();
+      } else {
+        this.#hideHover();
+      }
     };
 
     const onUp = (event: PointerEvent) => {
@@ -473,6 +497,12 @@ export class ThreeRenderer implements SceneRenderer {
     // Capture phase: runs before OrbitControls' own pointerdown, so a point drag never orbits.
     canvas.addEventListener("pointerdown", onDown, { capture: true });
     canvas.addEventListener("pointermove", onMove);
+    const onLeave = () => {
+      this.#pointer = undefined;
+      this.#hideHover();
+    };
+    canvas.addEventListener("pointerleave", onLeave);
+    this.#cleanups.push(() => canvas.removeEventListener("pointerleave", onLeave));
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointercancel", onUp);
     this.#cleanups.push(() => {
@@ -555,7 +585,86 @@ export class ThreeRenderer implements SceneRenderer {
     }
   }
 
+  /** World units per screen pixel in the 2D view. */
+  #worldPerPixel(): number {
+    const { height } = this.#size();
+    return (2 * this.#halfHeight) / this.#orthographic.zoom / Math.max(1, height);
+  }
+
+  /** In 2D, marks the point under the pointer on a graph or point and shows its coordinates. */
+  #updateHover(): void {
+    const state = this.#state;
+    const pointer = this.#pointer;
+    if (
+      this.#dimension !== "2d" ||
+      this.#options.coordinates === false ||
+      !state ||
+      !pointer ||
+      this.#tween
+    ) {
+      return this.#hideHover();
+    }
+    const at = new THREE.Vector3(pointer.x, pointer.y, 0).unproject(this.#orthographic);
+    const perPixel = this.#worldPerPixel();
+    const hit = nearestOnScene(state, [at.x, at.y], perPixel * 10);
+    if (!hit) return this.#hideHover();
+
+    const hover = (this.#hover ??= this.#createHover());
+    const object = this.#model?.objects.get(hit.id);
+    const color = object?.color ?? this.#palette[object?.type ?? "curve"];
+    (hover.marker.material as THREE.MeshBasicMaterial).color.set(color);
+    hover.marker.position.set(...hit.position);
+    hover.marker.scale.setScalar(perPixel * 5);
+    hover.marker.visible = true;
+    const decimals = coordinateDecimals(perPixel);
+    hover.label.element.textContent = (this.#options.formatCoordinates ?? formatCoordinates)(
+      hit.position,
+      decimals,
+    );
+    hover.label.position.set(...hit.position);
+    hover.label.visible = true;
+    this.#requestRender();
+  }
+
+  #createHover(): { marker: THREE.Mesh; label: CSS2DObject } {
+    const marker = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 24),
+      new THREE.MeshBasicMaterial({ depthTest: false, transparent: true }),
+    );
+    marker.renderOrder = 1000; // above everything
+    const label = createLabel("", {
+      color: this.#palette.label,
+      halo: this.#palette.labelHalo,
+      size: 13,
+      weight: 600,
+    });
+    label.element.style.padding = "0 8px 8px";
+    this.#scene.add(marker, label);
+    this.#cleanups.push(() => {
+      marker.geometry.dispose();
+      (marker.material as THREE.Material).dispose();
+      marker.removeFromParent();
+      label.removeFromParent();
+    });
+    return { marker, label };
+  }
+
+  #hideHover(): void {
+    const hover = this.#hover;
+    if (!hover || !hover.marker.visible) return;
+    hover.marker.visible = false;
+    hover.label.visible = false;
+    this.#requestRender();
+  }
+
   #setPalette(palette: Palette): void {
+    if (this.#hover) {
+      applyLabelStyle(this.#hover.label.element, {
+        color: palette.label,
+        halo: palette.labelHalo,
+        size: 13,
+      });
+    }
     this.#palette = palette;
     this.#graph.setPalette(palette);
     this.#applyBackground();

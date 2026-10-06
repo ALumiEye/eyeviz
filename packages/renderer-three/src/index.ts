@@ -18,6 +18,13 @@ export {
   type Bounds,
 } from "./bounds";
 export {
+  coordinateDecimals,
+  formatCoordinates,
+  formatNumber,
+  nearestOnScene,
+  type HoverHit,
+} from "./hover";
+export {
   buildGuides,
   disposeGuides,
   guideExtent,

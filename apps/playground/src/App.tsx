@@ -15,7 +15,7 @@ import { SpecEditor } from "./editor/SpecEditor";
 import { Inspector, type Selection } from "./editor/visual/Inspector";
 import { SceneTree } from "./editor/visual/SceneTree";
 import { EXAMPLES, exampleTitle, localizeExample } from "./examples";
-import { formatJson } from "./format";
+import { formatJson, vietnameseCoordinates } from "./format";
 import { getLanguage, setLanguage, useT, type Language } from "./i18n";
 import { ParameterControls } from "./ParameterControls";
 import { QuickGraphBar, type QuickGraphAddition } from "./QuickGraphBar";
@@ -289,6 +289,7 @@ export function App() {
             selected={selectedObject}
             onSelect={(id) => setSelection(id ? { kind: "object", id } : null)}
             dragMode={mode === "visual" ? "all" : "declared"}
+            {...(t.language === "vi" ? { formatCoordinates: vietnameseCoordinates } : {})}
             onDragPoint={onDragPoint}
             lazy={false}
             style={{ height: "100%", aspectRatio: "auto" }}

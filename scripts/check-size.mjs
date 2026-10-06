@@ -19,12 +19,14 @@ const dist = join(root, "packages/eyeviz/dist");
 /**
  * Budgets in gzip bytes, about 10% above the size when they were set (2026-10-05: 44.6, 52.1,
  * 45.1 + 8.8 lazy, 38.4 kB): growth needs a deliberate change here.
+ * 2026-10-06: renderer budgets raised (three 57 → 60, react lazy 10 → 12 kB) for 2D guides that
+ * follow the view, graph-aware framing and hover coordinates (55.2 and 10.6 kB at the time).
  * `initial` is what loads up front; `lazy` is loaded on demand (Three.js renderer for React).
  */
 const BUDGETS = [
   { entry: "index.js", name: "@alumieye/eyeviz", initial: 49_000 },
-  { entry: "three.js", name: "@alumieye/eyeviz/three", initial: 57_000 },
-  { entry: "react.js", name: "@alumieye/eyeviz/react", initial: 50_000, lazy: 10_000 },
+  { entry: "three.js", name: "@alumieye/eyeviz/three", initial: 60_000 },
+  { entry: "react.js", name: "@alumieye/eyeviz/react", initial: 50_000, lazy: 12_000 },
   { entry: "authoring.js", name: "@alumieye/eyeviz/authoring", initial: 42_000 },
 ];
 

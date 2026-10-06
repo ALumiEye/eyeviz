@@ -35,6 +35,7 @@ describe("when the renderer cannot start", () => {
   it("shows the scene as text if WebGL is unavailable", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.doMock("@alumieye/eyeviz-renderer-three", () => ({
+      formatCoordinates: () => "",
       ThreeRenderer: class {
         constructor() {
           throw new Error("WebGL is not available");
@@ -60,6 +61,7 @@ describe("when the renderer cannot start", () => {
       downloads++;
       if (!online) throw new Error("Failed to fetch dynamically imported module");
       return {
+        formatCoordinates: () => "",
         ThreeRenderer: class {
           constructor() {
             renderers.push(this);

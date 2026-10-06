@@ -21,8 +21,16 @@ const clampView = (v: number) => Math.max(-VIEW_LIMIT, Math.min(VIEW_LIMIT, v));
 /**
  * Bounding box and sphere of the valid objects in the state — all of them plus the origin, or
  * only the objects in `only` (used to focus the camera on a step's objects).
+ *
+ * In 2D, curves are framed like graphs on paper: across their whole x range, but vertically
+ * only within the frame's width (at least 10) of their typical height, so a steep part
+ * (y = x⁵, y = eˣ) runs off the top instead of shrinking everything else to a dot.
  */
-export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bounds {
+export function computeBounds(
+  state: SceneState,
+  only?: ReadonlySet<string>,
+  dimension: "2d" | "3d" = "3d",
+): Bounds {
   const min = only ? [Infinity, Infinity, Infinity] : [0, 0, 0];
   const max = only ? [-Infinity, -Infinity, -Infinity] : [0, 0, 0];
   const include = (x: number, y: number, z: number) => {
@@ -44,6 +52,9 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
     }
   };
 
+  // 2D curves are included after everything else, once the frame's width is known.
+  const graphs: (readonly Float64Array[])[] = [];
+
   for (const object of Object.values(state.objects)) {
     if (!object.valid || (only && !only.has(object.id))) continue;
     switch (object.type) {
@@ -63,7 +74,8 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
         break;
       case "curve":
       case "implicit":
-        for (const line of object.polylines) includeAll(line);
+        if (dimension === "2d") graphs.push(object.polylines);
+        else for (const line of object.polylines) includeAll(line);
         break;
       case "surface":
         includeAll(object.positions);
@@ -77,6 +89,8 @@ export function computeBounds(state: SceneState, only?: ReadonlySet<string>): Bo
         break;
     }
   }
+
+  if (graphs.length > 0) includeGraphs(graphs, include, min, max);
 
   if (!Number.isFinite(min[0] as number)) return { center: [0, 0, 0], radius: 1 };
   // Nothing but the origin (e.g. a new, empty scene): frame a comfortable ±5 so that objects
@@ -130,4 +144,53 @@ export function formatTick(value: number, step: number): string {
   const decimals = Math.max(0, -Math.floor(Math.log10(step)));
   const text = value.toFixed(decimals);
   return text === "-0" ? "0" : text.replace("-", "−");
+}
+
+/**
+ * Includes 2D graphs the way a graph on paper is framed: the window's height is about its
+ * width (at least 10), centred on each graph's median height, and the parts of a graph outside
+ * that window count neither vertically nor horizontally. A few passes let width and height
+ * settle (y = x⁵ on [−50, 50] beside y = sin x frames the region near the origin).
+ */
+function includeGraphs(
+  graphs: readonly (readonly Float64Array[])[],
+  include: (x: number, y: number, z: number) => void,
+  min: number[],
+  max: number[],
+): void {
+  const medians = graphs.map((lines) => {
+    const ys: number[] = [];
+    for (const line of lines) for (let i = 1; i < line.length; i += 3) ys.push(line[i] as number);
+    ys.sort((a, b) => a - b);
+    return ys.length > 0 ? (ys[Math.floor(ys.length / 2)] as number) : NaN;
+  });
+  // Horizontal extent of everything but the graphs, then of the graphs' visible parts.
+  const baseLeft = min[0] as number;
+  const baseRight = max[0] as number;
+  const extentWithin = (reach: number) => {
+    let left = baseLeft;
+    let right = baseRight;
+    graphs.forEach((lines, g) => {
+      for (const line of lines) {
+        for (let i = 0; i < line.length; i += 3) {
+          if (Math.abs((line[i + 1] as number) - (medians[g] as number)) > reach) continue;
+          left = Math.min(left, clampView(line[i] as number));
+          right = Math.max(right, clampView(line[i] as number));
+        }
+      }
+    });
+    return Number.isFinite(right - left) ? right - left : 0;
+  };
+
+  let reach = Math.max(10, extentWithin(Infinity));
+  for (let pass = 0; pass < 3; pass++) reach = Math.max(10, extentWithin(reach));
+
+  graphs.forEach((lines, g) => {
+    for (const line of lines) {
+      for (let i = 0; i < line.length; i += 3) {
+        if (Math.abs((line[i + 1] as number) - (medians[g] as number)) > reach) continue;
+        include(line[i] as number, line[i + 1] as number, line[i + 2] as number);
+      }
+    }
+  });
 }

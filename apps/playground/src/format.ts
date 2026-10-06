@@ -22,3 +22,17 @@ export function formatJson(value: unknown, indent = ""): string {
   }
   return JSON.stringify(value);
 }
+
+/**
+ * Coordinates as Vietnamese textbooks write them: `(1,25; −0,5)` — decimal comma, semicolon
+ * between the coordinates. Trailing zeros are dropped.
+ */
+export function vietnameseCoordinates(position: readonly number[], decimals: number): string {
+  const number = (value: number) => {
+    let text = value.toFixed(decimals);
+    if (text.includes(".")) text = text.replace(/\.?0+$/, "");
+    if (text === "-0") text = "0";
+    return text.replace("-", "−").replace(".", ",");
+  };
+  return `(${number(position[0] ?? 0)}; ${number(position[1] ?? 0)})`;
+}

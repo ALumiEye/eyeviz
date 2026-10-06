@@ -216,6 +216,28 @@ describe("bounds and camera", () => {
     expect(bounds.radius).toBeLessThan(VIEW_LIMIT);
   });
 
+  it("frames 2D graphs like paper: a steep graph runs off the top instead of shrinking the rest", () => {
+    const curve = (id: string, y: string, domain: [number, number]) => ({
+      id,
+      type: "curve",
+      variable: "x",
+      domain,
+      position: ["x", y, 0],
+    });
+    const engine = new EyeVizEngine({
+      version: "0.1",
+      scene: { dimension: "2d" },
+      objects: [curve("s", "2*sin(x)", [-5, 5]), curve("p", "x^5 + 6", [-50, 50])],
+    });
+    const bounds = computeBounds(engine.getState(), undefined, "2d");
+    // Around the sine's x range, not ±50; and not up to 3·10⁸ vertically.
+    expect(bounds.max?.[0]).toBeLessThan(8);
+    expect(bounds.min?.[0]).toBeGreaterThan(-8);
+    expect(bounds.max?.[1]).toBeLessThan(30);
+    // The same scene framed as 3D keeps everything (clamped).
+    expect(computeBounds(engine.getState()).max?.[1]).toBe(VIEW_LIMIT);
+  });
+
   it("frames ±5 for an empty scene, so new objects are on screen", () => {
     const engine = new EyeVizEngine({ version: "0.1", objects: [] });
     expect(computeBounds(engine.getState())).toMatchObject({

@@ -70,8 +70,13 @@ the renderer's whole lifetime.
 - **2D scenes** (`scene.dimension: "2d"`) use an orthographic camera looking down at the x–y
   plane, framing the drawing's bounding rectangle. Rotation is disabled; dragging pans and the
   wheel/pinch zooms. Only the x and y axes are drawn.
-- **Framing** ignores coordinates beyond ±`VIEW_LIMIT` (10⁴): a graph like y = eˣ on
-  [−50, 50] is framed as if it stopped there, so the rest of the scene stays visible.
+- **Framing** ignores coordinates beyond ±`VIEW_LIMIT` (10⁴). In 2D, graphs are framed like on
+  paper: the window's height is about its width (at least 10) around each graph's median
+  height, and parts outside it count neither way — y = x⁵ on [−50, 50] beside y = sin x runs
+  off the top instead of shrinking the sine to a dot.
+- **Coordinates on hover (2D):** moving the pointer near a graph or a point shows a marker and
+  the coordinates there (`coordinates: false` turns it off; `formatCoordinates` sets the text,
+  e.g. `(1,25; −0,5)` for Vietnamese). Hidden while panning or zooming.
 - **Sizes:** world-space sizes (point radius, arrow heads, default plane extent) scale with
   the scene's bounding sphere, so small and large scenes read the same.
 - **Render on demand:** a frame is drawn only when state, camera or size changes. There is no
